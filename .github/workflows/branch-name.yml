@@ -1,0 +1,48 @@
+name: Branch Name
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, edited]
+
+jobs:
+  enforce-branch-name:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enforce agent branch naming convention
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          BRANCH="${{ github.head_ref }}"
+          echo "PR branch: $BRANCH"
+
+          # Allowed patterns:
+          # - agent/architect/<task-slug>
+          # - agent/lead/<task-slug>
+          # - agent/test/<task-slug>
+          # - agent/sec/<task-slug>
+          # - agent/refactor/<task-slug>
+          # - agent/docs/<task-slug>
+          #
+          # <task-slug> should be lowercase letters/numbers with hyphens.
+          PATTERN='^agent/(architect|lead|test|sec|refactor|docs)/[a-z0-9]+(-[a-z0-9]+)*$'
+
+          if [[ "$BRANCH" =~ $PATTERN ]]; then
+            echo "✅ Branch name matches convention."
+            exit 0
+          fi
+
+          echo "❌ Branch name does NOT match required convention."
+          echo ""
+          echo "Expected: agent/<role>/<task-slug>"
+          echo "Roles: architect | lead | test | sec | refactor | docs"
+          echo "Examples:"
+          echo "  agent/architect/phase-planning"
+          echo "  agent/lead/note-editor"
+          echo "  agent/test/search-regression"
+          echo "  agent/sec/auth-cookie-flags"
+          echo "  agent/refactor/split-core-module"
+          echo "  agent/docs/update-architecture"
+          echo ""
+          echo "Your branch: $BRANCH"
+          exit 1

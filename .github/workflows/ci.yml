@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: ["main", "master"]
+
+jobs:
+  ci-check:
+    name: ci-check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ---- Detect toolchains (based on repo files) ----
+      - name: Detect toolchains
+        id: detect
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          js=0
+          py=0
+          rs=0
+
+          [[ -f "package.json" ]] && js=1
+          ([[ -f "pyproject.toml" ]] || [[ -f "requirements.txt" ]] || [[ -f "setup.py" ]]) && py=1
+          [[ -f "Cargo.toml" ]] && rs=1
+
+          echo "js=$js" >> "$GITHUB_OUTPUT"
+          echo "py=$py" >> "$GITHUB_OUTPUT"
+          echo "rs=$rs" >> "$GITHUB_OUTPUT"
+
+          echo "Detected: js=$js py=$py rs=$rs"
+
+      # ---- JS (Node) ----
+      - name: Setup Node
+        if: steps.detect.outputs.js == '1'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      # ---- Python ----
+      - name: Setup Python
+        if: steps.detect.outputs.py == '1'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python tooling (optional)
+        if: steps.detect.outputs.py == '1'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          # Install common tools if not already present in the environment.
+          python -m pip install ruff pytest mypy || true
+
+      # ---- Rust ----
+      - name: Setup Rust
+        if: steps.detect.outputs.rs == '1'
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache Cargo
+        if: steps.detect.outputs.rs == '1'
+        uses: Swatinem/rust-cache@v2
+
+      # ---- Run gate ----
+      - name: Make scripts executable
+        shell: bash
+        run: |
+          chmod +x ./scripts/ci-check || true
+          chmod +x ./scripts/*.sh || true
+
+      - name: Run ci-check
+        shell: bash
+        run: ./scripts/ci-check
