@@ -3,6 +3,8 @@
 _Select one (or more) and delete the rest:_
 
 - [ ] Feature (lead-agent)
+- [ ] UI/UX (ui-ux-agent)
+- [ ] Game Design (game-design-agent)
 - [ ] Tests (test-agent)
 - [ ] Security review/hardening (security-agent)
 - [ ] Refactor (refactor-agent)

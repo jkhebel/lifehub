@@ -1,0 +1,54 @@
+[
+    {
+        "id": "health",
+        "name": "Health",
+        "color": "#22c55e",
+        "icon": "💚",
+        "description": "Physical and mental wellness",
+        "parentId": null,
+        "targetProgress": 80,
+        "targetDate": "2025-12-31",
+        "aggregation": "average",
+        "trackers": [],
+        "children": [
+            {
+                "id": "fitness",
+                "name": "Physical Fitness",
+                "color": "#16a34a",
+                "icon": "🏋️",
+                "parentId": "health",
+                "trackers": [
+                    {
+                        "id": "workouts",
+                        "name": "Workouts This Week",
+                        "type": "number",
+                        "value": 3,
+                        "target": 5
+                    },
+                    {
+                        "id": "cardio",
+                        "name": "Weekly Cardio Minutes",
+                        "type": "progress",
+                        "value": 90,
+                        "target": 150,
+                        "min": 0,
+                        "max": 150,
+                        "unit": "min"
+                    }
+                ],
+                "children": []
+            }
+        ]
+    },
+    {
+        "id": "growth",
+        "name": "Growth",
+        "color": "#8b5cf6",
+        "icon": "📈",
+        "description": "Learning and habits",
+        "parentId": null,
+        "aggregation": "average",
+        "trackers": [],
+        "children": []
+    }
+]

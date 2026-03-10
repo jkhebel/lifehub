@@ -16,16 +16,18 @@ jobs:
           BRANCH="${{ github.head_ref }}"
           echo "PR branch: $BRANCH"
 
-          # Allowed patterns:
+          # Allowed patterns (must match AGENTS.md roster):
           # - agent/architect/<task-slug>
           # - agent/lead/<task-slug>
-          # - agent/test/<task-slug>
-          # - agent/sec/<task-slug>
-          # - agent/refactor/<task-slug>
+          # - agent/ui-ux/<task-slug>
+          # - agent/game-design/<task-slug>
           # - agent/docs/<task-slug>
+          # - agent/test/<task-slug>
+          # - agent/refactor/<task-slug>
+          # - agent/sec/<task-slug> (Security/Privacy)
           #
           # <task-slug> should be lowercase letters/numbers with hyphens.
-          PATTERN='^agent/(architect|lead|test|sec|refactor|docs)/[a-z0-9]+(-[a-z0-9]+)*$'
+          PATTERN='^agent/(architect|lead|ui-ux|game-design|docs|test|refactor|sec)/[a-z0-9]+(-[a-z0-9]+)*$'
 
           if [[ "$BRANCH" =~ $PATTERN ]]; then
             echo "✅ Branch name matches convention."
@@ -35,10 +37,12 @@ jobs:
           echo "❌ Branch name does NOT match required convention."
           echo ""
           echo "Expected: agent/<role>/<task-slug>"
-          echo "Roles: architect | lead | test | sec | refactor | docs"
+          echo "Roles: architect | lead | ui-ux | game-design | docs | test | refactor | sec"
           echo "Examples:"
           echo "  agent/architect/phase-planning"
           echo "  agent/lead/note-editor"
+          echo "  agent/ui-ux/bullseye-a11y"
+          echo "  agent/game-design/level-formulas"
           echo "  agent/test/search-regression"
           echo "  agent/sec/auth-cookie-flags"
           echo "  agent/refactor/split-core-module"

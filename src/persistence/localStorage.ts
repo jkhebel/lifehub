@@ -1,4 +1,6 @@
 import { DashboardState } from '../types';
+import { validateAreas } from '../model/validation';
+import { getDefaultAreas } from '../config/loadConfig';
 
 const STORAGE_KEY = 'life-dashboard-data';
 
@@ -17,6 +19,14 @@ export const loadDashboardState = <T extends DashboardState>(
     // Minimal shape check: must have areas array
     if (!parsed || !Array.isArray((parsed as DashboardState).areas)) {
       return createDefault();
+    }
+    // Validate restored areas; fall back to default tree if corrupted
+    const validation = validateAreas((parsed as DashboardState).areas);
+    if (!validation.ok) {
+      return {
+        ...parsed,
+        areas: getDefaultAreas(),
+      } as T;
     }
     return parsed;
   } catch {

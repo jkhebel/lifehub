@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Area, Tracker, DashboardState } from '../types';
-import { createInitialData } from '../data/initialData';
+import { getDefaultAreas } from '../config/loadConfig';
 import { v4 as uuidv4 } from 'uuid';
 import { calculateAreaProgress as calculateAreaProgressModel } from '../model/derivedMetrics';
 import {
@@ -11,7 +11,7 @@ import {
 export const useDashboard = () => {
   const [state, setState] = useState<DashboardState>(() =>
     loadDashboardState<DashboardState>(() => ({
-      areas: createInitialData(),
+      areas: getDefaultAreas(),
       currentAreaId: null,
       breadcrumbs: [],
     }))
@@ -197,7 +197,7 @@ export const useDashboard = () => {
   // Reset to initial data
   const resetData = useCallback(() => {
     setState({
-      areas: createInitialData(),
+      areas: getDefaultAreas(),
       currentAreaId: null,
       breadcrumbs: [],
     });
