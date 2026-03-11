@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# Quality gate for Life Dashboard. Run from repo root.
+# See docs/DEV.md. Keeps CI and local pre-PR checks in sync.
+set -euo pipefail
+
+root="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$root"
+
+if [[ ! -f package.json ]]; then
+  echo "No package.json found; nothing to run."
+  exit 0
+fi
+
+echo "Installing dependencies..."
+npm ci --no-audit --no-fund 2>/dev/null || npm install --no-audit --no-fund
+
+echo "Running typecheck..."
+npm run typecheck
+
+echo "Running tests..."
+npm test
+
+echo "Running build..."
+npm run build
+
+echo "ci-check passed."

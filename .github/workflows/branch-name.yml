@@ -24,10 +24,10 @@ jobs:
           # - agent/docs/<task-slug>
           # - agent/test/<task-slug>
           # - agent/refactor/<task-slug>
-          # - agent/sec/<task-slug> (Security/Privacy)
+          # - agent/security/<task-slug> (Security/Privacy; playbook agents/security-agent.md)
           #
           # <task-slug> should be lowercase letters/numbers with hyphens.
-          PATTERN='^agent/(architect|lead|ui-ux|game-design|docs|test|refactor|sec)/[a-z0-9]+(-[a-z0-9]+)*$'
+          PATTERN='^agent/(architect|lead|ui-ux|game-design|docs|test|refactor|security)/[a-z0-9]+(-[a-z0-9]+)*$'
 
           if [[ "$BRANCH" =~ $PATTERN ]]; then
             echo "✅ Branch name matches convention."
@@ -37,14 +37,14 @@ jobs:
           echo "❌ Branch name does NOT match required convention."
           echo ""
           echo "Expected: agent/<role>/<task-slug>"
-          echo "Roles: architect | lead | ui-ux | game-design | docs | test | refactor | sec"
+          echo "Roles: architect | lead | ui-ux | game-design | docs | test | refactor | security"
           echo "Examples:"
           echo "  agent/architect/phase-planning"
           echo "  agent/lead/note-editor"
           echo "  agent/ui-ux/bullseye-a11y"
           echo "  agent/game-design/level-formulas"
           echo "  agent/test/search-regression"
-          echo "  agent/sec/auth-cookie-flags"
+          echo "  agent/security/auth-cookie-flags"
           echo "  agent/refactor/split-core-module"
           echo "  agent/docs/update-architecture"
           echo ""

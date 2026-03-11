@@ -81,7 +81,7 @@ None required for MVP. All data is local (localStorage). Future features (e.g. o
 
 ### Branch naming (required)
 
-Use role-based branches: `agent/<role>/<task-slug>`. Roles: `architect`, `lead`, `test`, `sec`, `refactor`, `docs`. See [AGENTS.md](../AGENTS.md).
+Use role-based branches: `agent/<role>/<task-slug>`. Roles: `architect`, `lead`, `ui-ux`, `game-design`, `docs`, `test`, `refactor`, `security`. See [AGENTS.md](../AGENTS.md).
 
 Create branches manually, for example:
 
