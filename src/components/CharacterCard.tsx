@@ -1,3 +1,8 @@
+import {
+  getBadges,
+  getGlobalLevel,
+  getPerDomainLevels,
+} from '../model/gamification';
 import { Area } from '../types';
 
 export interface CharacterCardProps {
@@ -5,14 +10,6 @@ export interface CharacterCardProps {
   areas: Area[];
   /** Same completion function as bullseye (model-derived). */
   calculateProgress: (area: Area) => number;
-}
-
-/** Simple level from 0–100 aggregate (e.g. 0–25 → 1, 25–50 → 2, 50–75 → 3, 75–100 → 4). */
-function levelFromProgress(progress: number): number {
-  if (progress >= 75) return 4;
-  if (progress >= 50) return 3;
-  if (progress >= 25) return 2;
-  return 1;
 }
 
 export const CharacterCard = ({
@@ -28,7 +25,9 @@ export const CharacterCard = ({
       ? 0
       : completionByArea.reduce((sum, { progress }) => sum + progress, 0) /
         completionByArea.length;
-  const level = levelFromProgress(overallProgress);
+  const level = getGlobalLevel(areas, calculateProgress);
+  const perDomainLevels = getPerDomainLevels(areas, calculateProgress);
+  const badges = getBadges(areas, calculateProgress);
 
   return (
     <div className="rounded-xl border-2 border-amber-600/40 bg-gradient-to-b from-slate-800/90 to-slate-900/90 overflow-hidden shadow-lg">
@@ -65,31 +64,56 @@ export const CharacterCard = ({
           </div>
         </div>
 
+        {/* Badges */}
+        {badges.length > 0 && (
+          <div className="border-t border-slate-700/50 pt-3">
+            <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+              Badges
+            </h3>
+            <div className="flex flex-wrap gap-1.5">
+              {badges.map(({ id, label }) => (
+                <span
+                  key={id}
+                  className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-amber-500/20 text-amber-200/90 border border-amber-500/30"
+                >
+                  {label}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Top-level domain stats (same metrics as bullseye) */}
         <div className="border-t border-slate-700/50 pt-3">
           <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
             Domains
           </h3>
           <ul className="space-y-2">
-            {completionByArea.map(({ area, progress }) => (
-              <li
-                key={area.id}
-                className="flex items-center gap-2 text-sm"
-              >
-                {area.icon && (
-                  <span className="shrink-0 text-base" aria-hidden>
-                    {area.icon}
-                  </span>
-                )}
-                <span
-                  className="min-w-0 truncate text-slate-200"
-                  style={{ color: area.color }}
+            {completionByArea.map(({ area, progress }) => {
+              const domainLevel =
+                perDomainLevels.find((d) => d.areaId === area.id)?.level ?? 1;
+              return (
+                <li
+                  key={area.id}
+                  className="flex items-center gap-2 text-sm"
                 >
-                  {area.name}
-                </span>
-                <span className="shrink-0 text-slate-500 tabular-nums ml-auto">
-                  {Math.round(progress)}%
-                </span>
+                  {area.icon && (
+                    <span className="shrink-0 text-base" aria-hidden>
+                      {area.icon}
+                    </span>
+                  )}
+                  <span
+                    className="min-w-0 truncate text-slate-200"
+                    style={{ color: area.color }}
+                  >
+                    {area.name}
+                  </span>
+                  <span className="shrink-0 text-slate-400 text-xs tabular-nums">
+                    Lv.{domainLevel}
+                  </span>
+                  <span className="shrink-0 text-slate-500 tabular-nums ml-auto">
+                    {Math.round(progress)}%
+                  </span>
                 <div className="w-16 h-1.5 bg-slate-700 rounded-full overflow-hidden shrink-0">
                   <div
                     className="h-full rounded-full transition-all duration-300"
@@ -100,7 +124,8 @@ export const CharacterCard = ({
                   />
                 </div>
               </li>
-            ))}
+              );
+            })}
           </ul>
         </div>
       </div>
