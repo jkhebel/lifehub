@@ -8,6 +8,20 @@ interface BullseyeDiagramProps {
   onCenterClick?: () => void;
 }
 
+// Polar: angle in degrees, 0 = top, clockwise. Returns { x, y } in SVG space.
+function polarToCartesian(cx: number, cy: number, r: number, angleDeg: number) {
+  const rad = ((angleDeg - 90) * Math.PI) / 180;
+  return {
+    x: cx + r * Math.cos(rad),
+    y: cy + r * Math.sin(rad),
+  };
+}
+
+// Scale 0–100 to radius between minR and maxR
+function progressToRadius(progress: number, minR: number, maxR: number) {
+  return minR + ((maxR - minR) * progress) / 100;
+}
+
 export const BullseyeDiagram = ({
   areas,
   onAreaClick,
@@ -17,234 +31,232 @@ export const BullseyeDiagram = ({
 }: BullseyeDiagramProps) => {
   const size = 400;
   const center = size / 2;
-  const maxRadius = size / 2 - 20;
-  const minRadius = 50;
+  const maxRadius = size / 2 - 36;
+  const minRadius = 24;
+  const labelRadius = maxRadius + 12;
+  const scaleLevels = [0, 25, 50, 75, 100];
+  const gridStroke = '#e5e7eb';
+  const dataFill = 'rgba(45, 212, 191, 0.35)'; // teal, translucent
+  const dataStroke = '#14b8a6';
+  const dataPointRadius = 4;
 
-  // Calculate ring dimensions based on progress
-  const rings = areas.map((area, index) => {
+  const n = areas.length;
+
+  if (n === 0) {
+    return (
+      <div className="flex items-center justify-center w-full">
+        <svg
+          role="img"
+          aria-label="Radar chart of life domains"
+          width="100%"
+          height="100%"
+          viewBox={`0 0 ${size} ${size}`}
+          className="max-w-md aspect-square bg-white rounded-xl border-2 border-slate-200 shadow-[4px_4px_0_rgba(148,163,184,0.4)]"
+        >
+          <text
+            x={center}
+            y={center}
+            textAnchor="middle"
+            dominantBaseline="middle"
+            className="fill-slate-500 text-sm font-medium"
+          >
+            No areas yet. Add areas to see your radar.
+          </text>
+        </svg>
+      </div>
+    );
+  }
+
+  const angleStep = 360 / n;
+  const axisAngles = areas.map((_, i) => i * angleStep);
+
+  // Polygon points for a concentric ring at a given scale level (0–100)
+  const ringPoints = (level: number) => {
+    const r = progressToRadius(level, minRadius, maxRadius);
+    return axisAngles.map((angle) => polarToCartesian(center, center, r, angle));
+  };
+
+  // Data polygon vertices: one point per area at progress along its axis
+  const dataPoints = areas.map((area, i) => {
     const progress = calculateProgress(area);
-    const angleStart = (index * 360) / areas.length;
-    const angleEnd = ((index + 1) * 360) / areas.length;
-    const gapAngle = 2; // Gap between segments in degrees
-
-    return {
-      area,
-      progress,
-      angleStart: angleStart + gapAngle / 2,
-      angleEnd: angleEnd - gapAngle / 2,
-    };
+    const r = progressToRadius(progress, minRadius, maxRadius);
+    return polarToCartesian(center, center, r, axisAngles[i]);
   });
 
-  // Convert polar to cartesian
-  const polarToCartesian = (cx: number, cy: number, r: number, angle: number) => {
-    const rad = ((angle - 90) * Math.PI) / 180;
-    return {
-      x: cx + r * Math.cos(rad),
-      y: cy + r * Math.sin(rad),
-    };
+  // Wedge path for hit area (center → axis i outer → axis i+1 outer → center)
+  const wedgePath = (axisIndex: number) => {
+    const a1 = axisAngles[axisIndex];
+    const a2 = axisAngles[(axisIndex + 1) % n];
+    const p1 = polarToCartesian(center, center, maxRadius, a1);
+    const p2 = polarToCartesian(center, center, maxRadius, a2);
+    return `M ${center} ${center} L ${p1.x} ${p1.y} L ${p2.x} ${p2.y} Z`;
   };
 
-  // Create arc path
-  const createArcPath = (
-    innerRadius: number,
-    outerRadius: number,
-    startAngle: number,
-    endAngle: number
-  ) => {
-    const start1 = polarToCartesian(center, center, innerRadius, startAngle);
-    const end1 = polarToCartesian(center, center, innerRadius, endAngle);
-    const start2 = polarToCartesian(center, center, outerRadius, startAngle);
-    const end2 = polarToCartesian(center, center, outerRadius, endAngle);
-
-    const largeArc = endAngle - startAngle > 180 ? 1 : 0;
-
-    return [
-      'M', start2.x, start2.y,
-      'A', outerRadius, outerRadius, 0, largeArc, 1, end2.x, end2.y,
-      'L', end1.x, end1.y,
-      'A', innerRadius, innerRadius, 0, largeArc, 0, start1.x, start1.y,
-      'Z',
-    ].join(' ');
-  };
-
-  // Calculate label position
-  const getLabelPosition = (startAngle: number, endAngle: number, radius: number) => {
-    const midAngle = (startAngle + endAngle) / 2;
-    return polarToCartesian(center, center, radius, midAngle);
-  };
-
-  // Render progress rings for each area
-  const renderProgressRings = () => {
-    if (areas.length === 0) return null;
-
-    const ringWidth = (maxRadius - minRadius) / 3;
-
-    return rings.map(({ area, progress, angleStart, angleEnd }) => {
-      // Background ring (full)
-      const bgPath = createArcPath(
-        minRadius,
-        maxRadius,
-        angleStart,
-        angleEnd
-      );
-
-      // Progress ring (partial based on progress)
-      const progressRadius = minRadius + ((maxRadius - minRadius) * progress) / 100;
-      const progressPath = createArcPath(
-        minRadius,
-        progressRadius,
-        angleStart,
-        angleEnd
-      );
-
-      // Label position
-      const labelPos = getLabelPosition(angleStart, angleEnd, minRadius + ringWidth * 1.5);
-
-      return (
-        <g key={area.id} className="cursor-pointer group" onClick={() => onAreaClick(area.id)}>
-          {/* Background segment */}
-          <path
-            d={bgPath}
-            fill={`${area.color}20`}
-            stroke={area.color}
-            strokeWidth="1"
-            className="transition-all duration-300 group-hover:fill-opacity-40"
-          />
-
-          {/* Progress fill */}
-          <path
-            d={progressPath}
-            fill={area.color}
-            fillOpacity="0.6"
-            className="transition-all duration-500"
-          />
-
-          {/* Hover highlight */}
-          <path
-            d={bgPath}
-            fill="transparent"
-            className="transition-all duration-200 group-hover:fill-white group-hover:fill-opacity-10"
-          />
-
-          {/* Area label */}
-          <text
-            x={labelPos.x}
-            y={labelPos.y}
-            textAnchor="middle"
-            dominantBaseline="middle"
-            className="fill-white text-sm font-medium pointer-events-none transition-all duration-200 group-hover:fill-opacity-100"
-            fillOpacity="0.9"
-          >
-            {area.icon && <tspan>{area.icon} </tspan>}
-            <tspan>{area.name}</tspan>
-          </text>
-
-          {/* Progress percentage */}
-          <text
-            x={labelPos.x}
-            y={labelPos.y + 18}
-            textAnchor="middle"
-            dominantBaseline="middle"
-            className="fill-white text-xs pointer-events-none"
-            fillOpacity="0.6"
-          >
-            {Math.round(progress)}%
-          </text>
-        </g>
-      );
-    });
-  };
+  const padding = 56;
+  const viewSize = size + padding * 2;
+  const viewBox = `-${padding} -${padding} ${viewSize} ${viewSize}`;
 
   return (
-    <div className="flex items-center justify-center">
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-        {/* Outer glow */}
-        <defs>
-          <filter id="glow">
-            <feGaussianBlur stdDeviation="3" result="coloredBlur" />
-            <feMerge>
-              <feMergeNode in="coloredBlur" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-          <radialGradient id="centerGradient" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="#1e293b" />
-            <stop offset="100%" stopColor="#0f172a" />
-          </radialGradient>
-        </defs>
+    <div className="flex items-center justify-center w-full overflow-visible">
+      <svg
+        role="img"
+        aria-label="Radar chart of life domains and completion"
+        width="100%"
+        height="100%"
+        viewBox={viewBox}
+        className="max-w-md aspect-square bg-white rounded-xl border-2 border-slate-200 shadow-[4px_4px_0_rgba(148,163,184,0.4)]"
+        style={{ overflow: 'visible' }}
+      >
+        {/* Concentric polygon rings (grid) */}
+        {scaleLevels.map((level) => (
+          <polygon
+            key={level}
+            points={ringPoints(level)
+              .map((p) => `${p.x},${p.y}`)
+              .join(' ')}
+            fill="none"
+            stroke={gridStroke}
+            strokeWidth={1}
+          />
+        ))}
 
-        {/* Background circles for visual effect */}
-        <circle
-          cx={center}
-          cy={center}
-          r={maxRadius}
-          fill="none"
-          stroke="#334155"
-          strokeWidth="0.5"
-          strokeDasharray="4 4"
+        {/* Spokes */}
+        {axisAngles.map((angle) => {
+          const end = polarToCartesian(center, center, maxRadius, angle);
+          return (
+            <line
+              key={angle}
+              x1={center}
+              y1={center}
+              x2={end.x}
+              y2={end.y}
+              stroke={gridStroke}
+              strokeWidth={1}
+            />
+          );
+        })}
+
+        {/* Scale labels (e.g. 0, 25, 50, 75, 100) on one axis to avoid clutter) */}
+        {scaleLevels.map((level) => {
+          const p = polarToCartesian(center, center, progressToRadius(level, minRadius, maxRadius), 0);
+          return (
+            <text
+              key={level}
+              x={p.x - 10}
+              y={p.y}
+              textAnchor="end"
+              dominantBaseline="middle"
+              className="fill-slate-400 text-[10px] font-medium tabular-nums"
+            >
+              {level}
+            </text>
+          );
+        })}
+
+        {/* Data polygon (single filled shape connecting all progress points) */}
+        <polygon
+          points={dataPoints.map((p) => `${p.x},${p.y}`).join(' ')}
+          fill={dataFill}
+          stroke={dataStroke}
+          strokeWidth={2}
+          className="transition-all duration-500"
         />
-        <circle
-          cx={center}
-          cy={center}
-          r={(maxRadius + minRadius) / 2}
-          fill="none"
-          stroke="#334155"
-          strokeWidth="0.5"
-          strokeDasharray="4 4"
-        />
+        {dataPoints.map((p, i) => (
+          <circle
+            key={areas[i].id}
+            cx={p.x}
+            cy={p.y}
+            r={dataPointRadius}
+            fill={dataStroke}
+            className="pointer-events-none"
+          />
+        ))}
 
-        {/* Progress rings */}
-        {renderProgressRings()}
+        {/* Invisible clickable wedges per area */}
+        {areas.map((area, i) => (
+          <path
+            key={area.id}
+            d={wedgePath(i)}
+            fill="transparent"
+            className="cursor-pointer"
+            onClick={() => onAreaClick(area.id)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onAreaClick(area.id);
+              }
+            }}
+            role="button"
+            tabIndex={0}
+            aria-label={`${area.name}, ${Math.round(calculateProgress(area))} percent`}
+          />
+        ))}
 
-        {/* Center circle */}
+        {/* Category labels at outer end of each axis */}
+        {areas.map((area, i) => {
+          const p = polarToCartesian(center, center, labelRadius, axisAngles[i]);
+          const progress = calculateProgress(area);
+          const isRight = p.x >= center;
+          return (
+            <g key={area.id} className="pointer-events-none">
+              <text
+                x={p.x}
+                y={p.y}
+                textAnchor={isRight ? 'start' : 'end'}
+                dominantBaseline="middle"
+                className="fill-slate-700 text-xs font-semibold"
+              >
+                {area.icon && `${area.icon} `}
+                {area.name}
+              </text>
+              <text
+                x={p.x}
+                y={p.y + 12}
+                textAnchor={isRight ? 'start' : 'end'}
+                dominantBaseline="middle"
+                className="fill-slate-500 text-[10px] tabular-nums"
+              >
+                {Math.round(progress)}%
+              </text>
+            </g>
+          );
+        })}
+
+        {/* Center: optional label and back action */}
         <g
-          className={`${onCenterClick ? 'cursor-pointer' : ''}`}
+          className={onCenterClick ? 'cursor-pointer' : ''}
           onClick={onCenterClick}
+          aria-hidden
         >
           <circle
             cx={center}
             cy={center}
-            r={minRadius}
-            fill="url(#centerGradient)"
-            stroke="#475569"
-            strokeWidth="2"
-            filter="url(#glow)"
-            className={onCenterClick ? 'hover:stroke-blue-400 transition-colors' : ''}
+            r={minRadius - 4}
+            fill="#f8fafc"
+            stroke="#e2e8f0"
+            strokeWidth={1.5}
           />
           <text
             x={center}
             y={center}
             textAnchor="middle"
             dominantBaseline="middle"
-            className="fill-white text-base font-semibold"
+            className="fill-slate-600 text-sm font-semibold"
           >
             {centerLabel}
           </text>
-          {onCenterClick && areas.length > 0 && (
+          {onCenterClick && (
             <text
               x={center}
-              y={center + 16}
+              y={center + 12}
               textAnchor="middle"
               dominantBaseline="middle"
-              className="fill-slate-400 text-xs"
+              className="fill-slate-400 text-[10px]"
             >
-              ← Back
+              Back
             </text>
           )}
         </g>
-
-        {/* Empty state */}
-        {areas.length === 0 && (
-          <text
-            x={center}
-            y={center + 80}
-            textAnchor="middle"
-            dominantBaseline="middle"
-            className="fill-slate-500 text-sm"
-          >
-            No sub-areas yet
-          </text>
-        )}
       </svg>
     </div>
   );

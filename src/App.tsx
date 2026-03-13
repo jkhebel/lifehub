@@ -1,5 +1,12 @@
 import { useState } from 'react';
-import { BullseyeDiagram, TrackerPanel, Breadcrumbs, AddAreaModal, DomainTree, CharacterCard } from './components';
+import {
+  BullseyeDiagram,
+  TrackerPanel,
+  Breadcrumbs,
+  AddAreaModal,
+  DomainTree,
+  CharacterCard,
+} from './components';
 import { useDashboard } from './hooks/useDashboard';
 
 function App() {
@@ -13,6 +20,7 @@ function App() {
     addArea,
     updateArea,
     deleteArea,
+    moveArea,
     addTracker,
     updateTracker,
     deleteTracker,
@@ -22,6 +30,9 @@ function App() {
 
   const [isAddingArea, setIsAddingArea] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [renameAreaId, setRenameAreaId] = useState<string | null>(null);
+  const [areaToDeleteId, setAreaToDeleteId] = useState<string | null>(null);
+  const [showGamification, setShowGamification] = useState(true);
 
   const breadcrumbs = getBreadcrumbAreas();
 
@@ -35,13 +46,13 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
+    <div className="min-h-screen bg-gradient-to-br from-sky-50 via-amber-50 to-pink-50 text-slate-900">
       {/* Header */}
-      <header className="border-b border-slate-700/50 bg-slate-900/50 backdrop-blur-sm sticky top-0 z-40">
+      <header className="border-b border-indigo-100/80 bg-white/80 backdrop-blur-sm sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <h1 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+              <h1 className="text-xl font-extrabold tracking-tight bg-gradient-to-r from-sky-500 via-emerald-500 to-amber-500 bg-clip-text text-transparent">
                 Life Dashboard
               </h1>
               {breadcrumbs.length > 0 && (
@@ -54,7 +65,7 @@ function App() {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setIsAddingArea(true)}
-                className="flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors text-sm font-medium"
+                className="flex items-center gap-2 px-3 py-2 bg-sky-500 hover:bg-sky-600 rounded-[6px] border border-sky-600/60 shadow-[3px_3px_0_0_rgba(37,99,235,0.6)] active:shadow-[1px_1px_0_0_rgba(37,99,235,0.6)] text-sm font-semibold text-white"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -64,13 +75,17 @@ function App() {
 
               <button
                 onClick={() => setShowSettings(!showSettings)}
-                className="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors"
-                title="Settings"
+                className="flex items-center gap-2 px-2 py-1 text-slate-500 hover:text-slate-900 hover:bg-indigo-100 rounded-[6px] border border-indigo-200 transition-colors text-sm"
+                type="button"
+                aria-haspopup="dialog"
+                aria-expanded={showSettings}
+                aria-controls="settings-panel"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
+                <span className="hidden sm:inline">Settings</span>
               </button>
             </div>
           </div>
@@ -86,48 +101,74 @@ function App() {
 
       {/* Settings dropdown */}
       {showSettings && (
-        <div className="absolute right-4 top-16 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50 p-4 w-64">
-          <h3 className="font-medium mb-3">Settings</h3>
-          <button
-            onClick={() => {
-              if (confirm('Reset all data to defaults? This cannot be undone.')) {
-                resetData();
-              }
-              setShowSettings(false);
-            }}
-            className="w-full text-left px-3 py-2 text-red-400 hover:bg-slate-700 rounded transition-colors text-sm"
-          >
-            Reset to Defaults
-          </button>
-          <p className="text-slate-500 text-xs mt-3">
-            Data is stored in your browser's local storage.
+        <div
+          id="settings-panel"
+          role="dialog"
+          aria-modal="false"
+          aria-label="Settings"
+          className="absolute right-4 top-16 bg-white border border-indigo-100 rounded-xl shadow-[4px_4px_0_0_rgba(129,140,248,0.6)] z-50 p-4 w-72"
+        >
+          <h3 className="font-medium mb-2">Settings</h3>
+          <p className="text-slate-500 text-xs mb-4">
+            Tune how Life Dashboard feels. Changes affect only this browser.
           </p>
+
+          <div className="space-y-3">
+            <label className="flex items-start gap-2 text-sm text-slate-800">
+              <input
+                type="checkbox"
+                className="mt-1 rounded border-indigo-300 bg-indigo-50 text-sky-700 focus:ring-sky-500"
+                checked={showGamification}
+                onChange={(e) => setShowGamification(e.target.checked)}
+              />
+              <span>
+                Show levels and badges
+                <span className="block text-xs text-slate-500">
+                  Toggle RPG-style elements in the character card while keeping stats intact.
+                </span>
+              </span>
+            </label>
+
+            <button
+              onClick={() => {
+                if (confirm('Reset all areas and trackers to the built-in defaults? This cannot be undone.')) {
+                  resetData();
+                }
+                setShowSettings(false);
+              }}
+              className="w-full text-left px-3 py-2 text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-[6px] border border-rose-200 transition-colors text-sm"
+              type="button"
+            >
+              Reset to defaults
+            </button>
+            <p className="text-slate-500 text-xs">
+              Your configuration and progress are stored locally in this browser only.
+            </p>
+          </div>
         </div>
       )}
 
       {/* Main content */}
-      <main className="max-w-7xl mx-auto px-4 py-8">
-        <div className="grid lg:grid-cols-12 gap-8 items-start">
-          {/* Domain tree (sidebar) */}
-          <div className="lg:col-span-3">
-            <DomainTree
-              areas={state.areas}
-              selectedAreaId={state.currentAreaId}
-              onSelect={navigateToArea}
-              calculateProgress={calculateAreaProgress}
-            />
-          </div>
-          {/* Bullseye section */}
-          <div className="lg:col-span-5 flex flex-col items-center">
+      <main className="max-w-7xl mx-auto px-4 py-6 md:py-8">
+        {/* Top row: radar chart (left) and quick summary (right) */}
+        <div className="grid lg:grid-cols-12 gap-6 lg:gap-8 items-start mb-8">
+          {/* Radar chart section */}
+          <section
+            aria-label="Radar chart overview"
+            className="lg:col-span-7 flex flex-col items-center order-1"
+          >
+            <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3 self-start">
+              Radar
+            </h2>
             {/* Current area info */}
             {currentArea && (
               <div className="mb-4 text-center">
-                <h2 className="text-2xl font-bold flex items-center justify-center gap-2">
+                <h2 className="text-2xl font-extrabold flex items-center justify-center gap-2 tracking-tight">
                   {currentArea.icon && <span>{currentArea.icon}</span>}
                   <span style={{ color: currentArea.color }}>{currentArea.name}</span>
                 </h2>
                 {currentArea.description && (
-                  <p className="text-slate-400 mt-1">{currentArea.description}</p>
+                  <p className="text-slate-500 mt-1">{currentArea.description}</p>
                 )}
               </div>
             )}
@@ -141,12 +182,11 @@ function App() {
             />
 
             {/* Legend / Sub-areas count */}
-            <div className="mt-6 text-center">
-              <p className="text-slate-400 text-sm">
+            <div className="mt-4 text-center">
+              <p className="text-slate-500 text-sm">
                 {displayAreas.length === 0
-                  ? 'No sub-areas. Click "Add Area" to create one.'
-                  : `${displayAreas.length} area${displayAreas.length !== 1 ? 's' : ''} • Click to navigate`
-                }
+                  ? 'No sub-areas yet. Use “Add Area” to start mapping this part of your life.'
+                  : `${displayAreas.length} area${displayAreas.length !== 1 ? 's' : ''} • Click an axis to focus and log trackers`}
               </p>
             </div>
 
@@ -154,37 +194,51 @@ function App() {
             {currentArea && (
               <div className="mt-4 flex gap-2">
                 <button
-                  onClick={() => {
-                    const newName = prompt('New name:', currentArea.name);
-                    if (newName && newName !== currentArea.name) {
-                      updateArea(currentArea.id, { name: newName });
-                    }
-                  }}
-                  className="px-3 py-1.5 text-sm text-slate-400 hover:text-white hover:bg-slate-700 rounded transition-colors"
+                  onClick={() => setRenameAreaId(currentArea.id)}
+                  className="px-3 py-1.5 text-sm text-slate-600 hover:text-slate-900 hover:bg-indigo-50 rounded-[6px] border border-indigo-100 transition-colors"
                 >
                   Rename
                 </button>
                 <button
-                  onClick={() => {
-                    if (confirm(`Delete "${currentArea.name}" and all its contents?`)) {
-                      navigateUp();
-                      deleteArea(currentArea.id);
-                    }
-                  }}
-                  className="px-3 py-1.5 text-sm text-red-400 hover:text-red-300 hover:bg-slate-700 rounded transition-colors"
+                  onClick={() => setAreaToDeleteId(currentArea.id)}
+                  className="px-3 py-1.5 text-sm text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-[6px] border border-rose-200 transition-colors"
                 >
                   Delete Area
                 </button>
               </div>
             )}
-          </div>
+          </section>
 
-          {/* Right column: Character card + Tracker panel */}
-          <div className="lg:col-span-4 space-y-6">
+          {/* Right column: Character + merged Domains tree */}
+          <section
+            aria-label="Character and domains"
+            className="lg:col-span-5 space-y-4 order-2"
+          >
             <CharacterCard
               areas={state.areas}
               calculateProgress={calculateAreaProgress}
+              showGamification={showGamification}
             />
+            <DomainTree
+              areas={state.areas}
+              selectedAreaId={state.currentAreaId}
+              onSelect={navigateToArea}
+              calculateProgress={calculateAreaProgress}
+              showGamification={showGamification}
+              onMoveArea={moveArea}
+            />
+          </section>
+        </div>
+
+        {/* Lower row: trackers only */}
+        <div className="grid lg:grid-cols-12 gap-6 lg:gap-8 items-start">
+          <section
+            aria-label="Trackers and editors"
+            className="lg:col-span-12"
+          >
+            <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">
+              Trackers
+            </h2>
             <TrackerPanel
               area={currentArea}
               onUpdateArea={updateArea}
@@ -193,39 +247,7 @@ function App() {
               onAddTracker={addTracker}
               calculateProgress={calculateAreaProgress}
             />
-
-            {/* Quick stats when no area selected */}
-            {!currentArea && displayAreas.length > 0 && (
-              <div className="mt-6 grid grid-cols-2 gap-4">
-                {displayAreas.slice(0, 4).map((area) => {
-                  const progress = calculateAreaProgress(area);
-                  return (
-                    <button
-                      key={area.id}
-                      onClick={() => navigateToArea(area.id)}
-                      className="bg-slate-800/30 rounded-lg p-4 border border-slate-700/50 hover:border-slate-600 transition-all text-left"
-                    >
-                      <div className="flex items-center gap-2 mb-2">
-                        {area.icon && <span>{area.icon}</span>}
-                        <span className="font-medium" style={{ color: area.color }}>
-                          {area.name}
-                        </span>
-                      </div>
-                      <div className="text-2xl font-bold text-white">
-                        {Math.round(progress)}%
-                      </div>
-                      <div className="mt-2 h-1.5 bg-slate-700 rounded-full overflow-hidden">
-                        <div
-                          className="h-full rounded-full transition-all"
-                          style={{ width: `${progress}%`, backgroundColor: area.color }}
-                        />
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+          </section>
         </div>
       </main>
 
@@ -242,6 +264,33 @@ function App() {
         <div
           className="fixed inset-0 z-40"
           onClick={() => setShowSettings(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Rename area dialog */}
+      {renameAreaId && (
+        <RenameAreaDialog
+          areaId={renameAreaId}
+          onClose={() => setRenameAreaId(null)}
+          onRename={(newName) => {
+            updateArea(renameAreaId, { name: newName });
+            setRenameAreaId(null);
+          }}
+          currentName={currentArea?.id === renameAreaId ? currentArea.name : undefined}
+        />
+      )}
+
+      {/* Delete area dialog */}
+      {areaToDeleteId && currentArea && currentArea.id === areaToDeleteId && (
+        <DeleteAreaDialog
+          areaName={currentArea.name}
+          onConfirm={() => {
+            navigateUp();
+            deleteArea(currentArea.id);
+            setAreaToDeleteId(null);
+          }}
+          onCancel={() => setAreaToDeleteId(null)}
         />
       )}
     </div>
@@ -249,3 +298,116 @@ function App() {
 }
 
 export default App;
+
+interface RenameAreaDialogProps {
+  areaId: string;
+  currentName?: string;
+  onRename: (newName: string) => void;
+  onClose: () => void;
+}
+
+const RenameAreaDialog = ({
+  currentName,
+  onRename,
+  onClose,
+}: RenameAreaDialogProps) => {
+  const [value, setValue] = useState(currentName ?? '');
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Rename area"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white border-2 border-slate-200 rounded-xl p-5 w-full max-w-sm shadow-[4px_4px_0_rgba(148,163,184,0.4)]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 className="text-lg font-semibold text-slate-900 mb-3">Rename area</h2>
+        <p className="text-sm text-slate-500 mb-3">
+          Give this part of your life a clearer name. This won&apos;t affect its trackers.
+        </p>
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-sky-500"
+          autoFocus
+        />
+        <div className="flex justify-end gap-2 mt-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-3 py-1.5 text-sm rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            disabled={!value.trim()}
+            onClick={() => {
+              const trimmed = value.trim();
+              if (trimmed) onRename(trimmed);
+            }}
+            className="px-3 py-1.5 text-sm rounded-lg bg-sky-500 disabled:bg-slate-300 disabled:text-slate-500 hover:bg-sky-600 text-white transition-colors"
+          >
+            Save
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+interface DeleteAreaDialogProps {
+  areaName: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}
+
+const DeleteAreaDialog = ({
+  areaName,
+  onConfirm,
+  onCancel,
+}: DeleteAreaDialogProps) => (
+  <div
+    className="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
+    role="dialog"
+    aria-modal="true"
+    aria-label="Delete area"
+    onClick={onCancel}
+  >
+    <div
+      className="bg-white border-2 border-slate-200 rounded-xl p-5 w-full max-w-sm shadow-[4px_4px_0_rgba(148,163,184,0.4)]"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <h2 className="text-lg font-semibold mb-3 text-rose-600">Delete area</h2>
+      <p className="text-sm text-slate-700 mb-2">
+        Are you sure you want to delete <span className="font-semibold">{areaName}</span> and
+        all of its sub-areas and trackers?
+      </p>
+      <p className="text-xs text-slate-500 mb-4">
+        This action cannot be undone, but you can always recreate the area later.
+      </p>
+      <div className="flex justify-end gap-2">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="px-3 py-1.5 text-sm rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          onClick={onConfirm}
+          className="px-3 py-1.5 text-sm rounded-lg bg-rose-500 hover:bg-rose-600 text-white transition-colors"
+        >
+          Delete area
+        </button>
+      </div>
+    </div>
+  </div>
+);
+

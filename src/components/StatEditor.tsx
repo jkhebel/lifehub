@@ -13,7 +13,7 @@ export interface StatEditorProps {
 }
 
 const INPUT_CLASS =
-  'bg-slate-700 border border-slate-600 rounded px-2 py-1 text-sm focus:outline-none focus:border-blue-500';
+  'bg-slate-50 border border-slate-300 rounded px-2 py-1 text-sm text-slate-900 focus:outline-none focus:border-sky-500';
 
 export const StatEditor = ({
   tracker,
@@ -86,8 +86,8 @@ export const StatEditor = ({
               }}
               className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
                 tracker.value
-                  ? 'bg-green-600 hover:bg-green-700'
-                  : 'bg-slate-600 hover:bg-slate-500'
+                  ? 'bg-emerald-500 hover:bg-emerald-600 text-white'
+                  : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
               }`}
             >
               {tracker.value ? 'Yes → No' : 'No → Yes'}
@@ -95,7 +95,7 @@ export const StatEditor = ({
           </div>
         ) : (
           <div className="flex flex-wrap gap-2 items-center">
-            <label className="text-slate-400 text-sm shrink-0">Value</label>
+            <label className="text-slate-600 text-sm shrink-0">Value</label>
             <input
               type="number"
               value={editValue}
@@ -106,7 +106,7 @@ export const StatEditor = ({
             />
             {supportsTarget && (
               <>
-                <label className="text-slate-400 text-sm shrink-0">Target</label>
+                <label className="text-slate-600 text-sm shrink-0">Target</label>
                 <input
                   type="number"
                   min={0}
@@ -119,19 +119,24 @@ export const StatEditor = ({
                 {tracker.unit && (
                   <span className="text-slate-500 text-sm">{tracker.unit}</span>
                 )}
+                {tracker.type === 'level' && tracker.max != null && (
+                  <span className="text-[11px] text-slate-500">
+                    out of {tracker.max} levels
+                  </span>
+                )}
               </>
             )}
             <button
               type="button"
               onClick={handleSave}
-              className="bg-blue-600 hover:bg-blue-700 px-2 py-1 rounded text-sm transition-colors"
+              className="bg-sky-500 hover:bg-sky-600 px-2 py-1 rounded text-sm text-white transition-colors"
             >
               Save
             </button>
             <button
               type="button"
               onClick={handleCancel}
-              className="text-slate-500 hover:text-slate-300 text-sm"
+              className="text-slate-500 hover:text-slate-700 text-sm"
             >
               Cancel
             </button>
@@ -159,7 +164,7 @@ export const StatEditor = ({
         tracker.max != null ||
         tracker.type === 'percentage' ||
         tracker.type === 'boolean') && (
-        <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
+        <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
           <div
             className="h-full rounded-full transition-all duration-500"
             style={{

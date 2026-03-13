@@ -10,11 +10,14 @@ export interface CharacterCardProps {
   areas: Area[];
   /** Same completion function as bullseye (model-derived). */
   calculateProgress: (area: Area) => number;
+  /** When false, hide explicit gamey chrome (levels/badges) but keep stats. */
+  showGamification?: boolean;
 }
 
 export const CharacterCard = ({
   areas,
   calculateProgress,
+  showGamification = true,
 }: CharacterCardProps) => {
   const completionByArea = areas.map((area) => ({
     area,
@@ -30,14 +33,14 @@ export const CharacterCard = ({
   const badges = getBadges(areas, calculateProgress);
 
   return (
-    <div className="rounded-xl border-2 border-amber-600/40 bg-gradient-to-b from-slate-800/90 to-slate-900/90 overflow-hidden shadow-lg">
+    <div className="rounded-[12px] border-2 border-indigo-200 bg-white/90 overflow-hidden shadow-[3px_3px_0_0_rgba(129,140,248,0.7),inset_0_1px_0_rgba(255,255,255,0.9)]">
       {/* Character sheet header */}
-      <div className="px-4 py-3 border-b border-slate-600/50 bg-slate-800/50">
-        <h2 className="text-lg font-bold text-amber-200/90 tracking-wide">
+      <div className="px-4 py-3 border-b border-indigo-100 bg-indigo-50">
+        <h2 className="text-lg font-bold text-indigo-700 tracking-wide">
           Character Sheet
         </h2>
-        <p className="text-slate-400 text-xs mt-0.5">
-          Overview of your life domains
+        <p className="text-slate-500 text-xs mt-0.5">
+          Snapshot of your real-life domains today
         </p>
       </div>
 
@@ -45,19 +48,28 @@ export const CharacterCard = ({
         {/* Overall level and progress */}
         <div className="flex items-center justify-between gap-4">
           <div>
-            <span className="text-slate-400 text-sm">Level </span>
-            <span className="text-2xl font-bold text-amber-400 tabular-nums">
-              {level}
-            </span>
+            {showGamification && (
+              <>
+                <span className="text-slate-500 text-sm">Level </span>
+                <span className="text-2xl font-bold text-amber-500 tabular-nums">
+                  {level}
+                </span>
+              </>
+            )}
+            {!showGamification && (
+              <>
+                <span className="text-slate-500 text-sm">Overall completion</span>
+              </>
+            )}
           </div>
           <div className="flex-1 min-w-0 max-w-[180px]">
             <div className="flex justify-between text-xs text-slate-500 mb-1">
               <span>Overall</span>
               <span>{Math.round(overallProgress)}%</span>
             </div>
-            <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
+            <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
               <div
-                className="h-full rounded-full bg-amber-500/80 transition-all duration-500"
+                className="h-full rounded-full bg-amber-400/90 transition-all duration-500"
                 style={{ width: `${overallProgress}%` }}
               />
             </div>
@@ -65,9 +77,9 @@ export const CharacterCard = ({
         </div>
 
         {/* Badges */}
-        {badges.length > 0 && (
-          <div className="border-t border-slate-700/50 pt-3">
-            <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+        {showGamification && badges.length > 0 && (
+          <div className="border-t border-slate-200 pt-3">
+            <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
               Badges
             </h3>
             <div className="flex flex-wrap gap-1.5">
@@ -84,10 +96,26 @@ export const CharacterCard = ({
         )}
 
         {/* Top-level domain stats (same metrics as bullseye) */}
-        <div className="border-t border-slate-700/50 pt-3">
-          <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+        <div className="border-t border-slate-200 pt-3">
+          <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
             Domains
           </h3>
+          {completionByArea.length > 0 && (
+            <p className="text-[11px] text-slate-500 mb-2">
+              {(() => {
+                const sorted = [...completionByArea].sort(
+                  (a, b) => b.progress - a.progress
+                );
+                const strongest = sorted[0];
+                const weakest = sorted[sorted.length - 1];
+                if (!strongest) return null;
+                if (sorted.length === 1) {
+                  return `Strongest focus: ${strongest.area.name}`;
+                }
+                return `Strongest: ${strongest.area.name} • Needs support: ${weakest.area.name}`;
+              })()}
+            </p>
+          )}
           <ul className="space-y-2">
             {completionByArea.map(({ area, progress }) => {
               const domainLevel =
@@ -108,13 +136,15 @@ export const CharacterCard = ({
                   >
                     {area.name}
                   </span>
-                  <span className="shrink-0 text-slate-400 text-xs tabular-nums">
-                    Lv.{domainLevel}
-                  </span>
+                  {showGamification && (
+                    <span className="shrink-0 text-slate-500 text-xs tabular-nums">
+                      Lv.{domainLevel}
+                    </span>
+                  )}
                   <span className="shrink-0 text-slate-500 tabular-nums ml-auto">
                     {Math.round(progress)}%
                   </span>
-                <div className="w-16 h-1.5 bg-slate-700 rounded-full overflow-hidden shrink-0">
+                <div className="w-16 h-1.5 bg-slate-200 rounded-full overflow-hidden shrink-0">
                   <div
                     className="h-full rounded-full transition-all duration-300"
                     style={{

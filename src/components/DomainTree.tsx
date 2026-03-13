@@ -1,15 +1,16 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { Area } from '../types';
+import { progressToLevel } from '../model/gamification';
 
 export interface DomainTreeProps {
-  /** Root areas (top-level domains). */
   areas: Area[];
-  /** Currently selected area id, or null for "Life" root. */
   selectedAreaId: string | null;
-  /** Called when user selects an area (or null to go to root). */
   onSelect: (areaId: string | null) => void;
-  /** Compute progress for an area (0–100). */
   calculateProgress: (area: Area) => number;
+  /** When true, show level (Lv.X) per domain. */
+  showGamification?: boolean;
+  /** Move area to new parent (null = root) at optional index. */
+  onMoveArea?: (areaId: string, newParentId: string | null, index?: number) => void;
 }
 
 interface FlatNode {
@@ -41,16 +42,19 @@ export const DomainTree = ({
   selectedAreaId,
   onSelect,
   calculateProgress,
+  showGamification = true,
+  onMoveArea,
 }: DomainTreeProps) => {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(() => new Set());
   const [focusedIndex, setFocusedIndex] = useState<number>(0);
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [dropTargetId, setDropTargetId] = useState<string | null>(null);
 
   const flatNodes = useMemo(
     () => flattenTree(areas, expandedIds, 0),
     [areas, expandedIds]
   );
 
-  /** Row 0 = "Life" root, rows 1..n = flatNodes. */
   const rowCount = 1 + flatNodes.length;
 
   const toggleExpand = useCallback((areaId: string) => {
@@ -122,59 +126,103 @@ export const DomainTree = ({
     if (idx >= 0 && focusedIndex !== idx + 1) setFocusedIndex(idx + 1);
   }, [selectedAreaId, flatNodes]);
 
+  const handleDragStart = useCallback((e: React.DragEvent, areaId: string) => {
+    setDragId(areaId);
+    e.dataTransfer.setData('text/plain', areaId);
+    e.dataTransfer.effectAllowed = 'move';
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent, targetId: string | null) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (dragId && dragId !== targetId) setDropTargetId(targetId);
+  }, [dragId]);
+
+  const handleDragLeave = useCallback(() => {
+    setDropTargetId(null);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent, targetId: string | null) => {
+    e.preventDefault();
+    const areaId = e.dataTransfer.getData('text/plain');
+    if (!areaId || !onMoveArea) return;
+    if (targetId === areaId) return;
+    onMoveArea(areaId, targetId);
+    setDragId(null);
+    setDropTargetId(null);
+  }, [onMoveArea]);
+
+  const handleDragEnd = useCallback(() => {
+    setDragId(null);
+    setDropTargetId(null);
+  }, []);
+
   return (
     <div
-      className="rounded-xl border border-slate-700/50 bg-slate-800/30 overflow-hidden"
+      className="rounded-[8px] border-2 border-amber-200/80 bg-white/95 overflow-hidden shadow-[3px_3px_0_rgba(251,191,36,0.35),inset_0_1px_0_rgba(255,255,255,0.8)]"
       role="tree"
-      aria-label="Domain tree"
+      aria-label="Domains"
       tabIndex={0}
       onKeyDown={handleKeyDown}
     >
-      <div className="p-2 border-b border-slate-700/50">
-        <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">
-          Domains
-        </span>
+      <div className="px-2 py-1.5 border-b border-amber-100 bg-amber-50/80">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[11px] font-semibold text-amber-800/80 uppercase tracking-wider">
+            Domains
+          </span>
+          <span className="text-[10px] text-amber-700/60 hidden sm:inline">
+            ↑↓ · Enter · Drag to move
+          </span>
+        </div>
       </div>
-      <ul className="py-1 max-h-[400px] overflow-y-auto" role="group">
-        {/* Root row: "Life" */}
+      <ul className="py-1 max-h-[380px] overflow-y-auto" role="group">
+        {/* Life root */}
         <li
           role="treeitem"
           aria-selected={selectedAreaId === null}
           className={`
-            flex items-center gap-2 py-1.5 px-2 rounded-md cursor-pointer
-            ${focusedIndex === 0 ? 'bg-slate-700/50' : ''}
-            ${selectedAreaId === null ? 'ring-1 ring-inset ring-slate-500' : ''}
-            hover:bg-slate-700/30
+            flex items-center gap-2 py-1.5 px-2 rounded-[4px] cursor-pointer
+            ${focusedIndex === 0 ? 'bg-amber-100/80' : ''}
+            ${selectedAreaId === null ? 'ring-1 ring-inset ring-amber-400' : ''}
+            hover:bg-amber-50
+            ${dropTargetId === null && dragId ? 'ring-1 border-2 border-dashed border-amber-400' : ''}
           `}
-          onClick={() => {
-            setFocusedIndex(0);
-            onSelect(null);
-          }}
+          onClick={() => { setFocusedIndex(0); onSelect(null); }}
+          onDragOver={(e) => handleDragOver(e, null)}
+          onDragLeave={handleDragLeave}
+          onDrop={(e) => handleDrop(e, null)}
         >
           <span className="w-5 shrink-0" aria-hidden />
-          <span className="shrink-0 text-base" aria-hidden>
-            🎯
-          </span>
-          <span className="min-w-0 truncate font-medium text-slate-200">
-            Life
-          </span>
+          <span className="shrink-0 text-base" aria-hidden>🎯</span>
+          <span className="min-w-0 truncate font-medium text-slate-800">Life</span>
         </li>
         {flatNodes.map((node, index) => {
           const rowIndex = index + 1;
           const isSelected = node.area.id === selectedAreaId;
           const progress = calculateProgress(node.area);
+          const level = progressToLevel(progress);
+          const isDropTarget = dropTargetId === node.area.id;
+          const isDragging = dragId === node.area.id;
           return (
             <li
               key={node.area.id}
               role="treeitem"
               aria-expanded={node.hasChildren ? node.isExpanded : undefined}
               aria-selected={isSelected}
-              style={{ paddingLeft: `${node.depth * 16 + 8}px` }}
+              draggable={!!onMoveArea}
+              onDragStart={(e) => onMoveArea && handleDragStart(e, node.area.id)}
+              onDragOver={(e) => handleDragOver(e, node.area.id)}
+              onDragLeave={handleDragLeave}
+              onDrop={(e) => handleDrop(e, node.area.id)}
+              onDragEnd={handleDragEnd}
+              style={{ paddingLeft: `${node.depth * 14 + 8}px` }}
               className={`
-                flex items-center gap-2 py-1.5 px-2 rounded-md cursor-pointer
-                ${rowIndex === focusedIndex ? 'bg-slate-700/50' : ''}
-                ${isSelected ? 'ring-1 ring-inset ring-slate-500' : ''}
-                hover:bg-slate-700/30
+                flex items-center gap-2 py-1.5 px-2 rounded-[4px] cursor-pointer
+                ${rowIndex === focusedIndex ? 'bg-amber-100/80' : ''}
+                ${isSelected ? 'ring-1 ring-inset ring-amber-400' : ''}
+                hover:bg-amber-50
+                ${isDropTarget ? 'ring-1 border-2 border-dashed border-amber-500 bg-amber-50' : ''}
+                ${isDragging ? 'opacity-50' : ''}
               `}
               onClick={() => {
                 setFocusedIndex(rowIndex);
@@ -185,39 +233,36 @@ export const DomainTree = ({
               {node.hasChildren ? (
                 <button
                   type="button"
-                  className="shrink-0 p-0.5 text-slate-400 hover:text-white focus:outline-none"
+                  className="shrink-0 p-0.5 text-slate-500 hover:text-slate-800 focus:outline-none"
                   aria-label={node.isExpanded ? 'Collapse' : 'Expand'}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleExpand(node.area.id);
-                  }}
+                  onClick={(e) => { e.stopPropagation(); toggleExpand(node.area.id); }}
                 >
-                  <svg
-                    className={`w-4 h-4 transition-transform ${node.isExpanded ? 'rotate-90' : ''}`}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
+                  <svg className={`w-3.5 h-3.5 transition-transform ${node.isExpanded ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
                 </button>
               ) : (
-                <span className="w-5 shrink-0" aria-hidden />
+                <span className="w-[14px] shrink-0" aria-hidden />
               )}
               {node.area.icon && (
-                <span className="shrink-0 text-base" aria-hidden>
-                  {node.area.icon}
-                </span>
+                <span className="shrink-0 text-sm" aria-hidden>{node.area.icon}</span>
               )}
               <span
-                className="min-w-0 truncate font-medium text-slate-200"
+                className="min-w-0 truncate font-medium text-slate-800 text-sm"
                 style={isSelected ? { color: node.area.color } : undefined}
               >
                 {node.area.name}
               </span>
-              <span className="shrink-0 text-slate-500 text-sm tabular-nums">
-                {Math.round(progress)}%
-              </span>
+              {showGamification && (
+                <span className="shrink-0 text-[10px] text-amber-700/80 tabular-nums">Lv.{level}</span>
+              )}
+              <span className="shrink-0 text-slate-500 text-[11px] tabular-nums">{Math.round(progress)}%</span>
+              <div className="w-10 h-1 bg-slate-200 rounded-full overflow-hidden shrink-0">
+                <div
+                  className="h-full rounded-full transition-all duration-300"
+                  style={{ width: `${progress}%`, backgroundColor: node.area.color }}
+                />
+              </div>
             </li>
           );
         })}
