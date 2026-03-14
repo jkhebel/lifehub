@@ -28,6 +28,7 @@ The same tree drives navigation, derived metrics, bullseye visualization, and ch
 | `description` | string | No | Short description. |
 | `trackers` | Tracker[] | Yes | Stats belonging to this node (may be empty). |
 | `children` | Area[] | Yes | Nested sub-areas (may be empty). |
+| `achievements` | Achievement[] | No | Milestones, tasks, and projects for this area. |
 | `parentId` | string \| null | Yes | Parent area id; `null` for root areas. |
 | `targetProgress` | number | No | Target progress 0–100 for this area. |
 | `targetDate` | string | No | ISO date (e.g. `"2025-12-31"`). |
@@ -115,3 +116,22 @@ A validation function for raw JSON configs should:
 - Optionally: normalize (e.g. default `aggregation` to `"average"`, ensure `weight` present when needed). Strict vs minimal mode can be defined in T1/T1b.
 
 Configs can come from a **bundled default** (e.g. shipped with the app) or **user-supplied** (import or localStorage); the model layer consumes the validated shape regardless of source. See [TASKS.md](TASKS.md) T1 and any T1b/T10 config-loading task.
+
+---
+
+## 6. Achievement (milestones, tasks, projects)
+
+Each **Area** may have an optional `achievements` array. An **Achievement** represents a milestone (one-time), task (repeatable), or project (container).
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `id` | string | Yes | Stable identifier. |
+| `name` | string | Yes | Display label. |
+| `kind` | string | Yes | `"milestone"` \| `"task"` \| `"project"`. |
+| `areaId` | string | Yes | ID of the area this achievement belongs to. |
+| `parentId` | string | No | When nested under a project, the parent achievement id. |
+| `xpReward` | number | No | XP granted on completion (tasks: per completion; milestones: one-time). |
+| `targetCount` | number | No | For tasks: optional target count per period. |
+| `children` | Achievement[] | No | When `kind` is `"project"`, nested achievements. |
+
+User state (persisted separately from config) tracks **completion log** (achievementId + completedAt), **domainXp**, **unlockedBadges**, **unlockedTitles**, **avatarUnlocks**, **selectedAvatar**, and **selectedTitle**. See [ARCHITECTURE.md](ARCHITECTURE.md) §5.

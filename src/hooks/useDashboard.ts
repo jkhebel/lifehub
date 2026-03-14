@@ -1,8 +1,16 @@
 import { useState, useCallback, useEffect } from 'react';
-import { Area, Tracker, DashboardState } from '../types';
+import { Area, Tracker, DashboardState, getDefaultGamificationState, Achievement, CompletionLogEntry } from '../types';
 import { getDefaultAreas } from '../config/loadConfig';
 import { v4 as uuidv4 } from 'uuid';
-import { calculateAreaProgress as calculateAreaProgressModel } from '../model/derivedMetrics';
+import {
+  calculateAreaProgress as calculateAreaProgressModel,
+  calculateMilestoneProgress as calculateMilestoneProgressModel,
+} from '../model/derivedMetrics';
+import {
+  getAllEarnedBadgeIds,
+  getEarnedTitleIds,
+  getEarnedAvatarIds,
+} from '../model/gamification';
 import {
   loadDashboardState,
   persistDashboardState,
@@ -14,6 +22,7 @@ export const useDashboard = () => {
       areas: getDefaultAreas(),
       currentAreaId: null,
       breadcrumbs: [],
+      gamification: getDefaultGamificationState(),
     }))
   );
 
@@ -236,10 +245,93 @@ export const useDashboard = () => {
     }));
   }, []);
 
+  // Add an achievement to an area
+  const addAchievement = useCallback((areaId: string, achievement: Omit<Achievement, 'id'>) => {
+    const newAchievement: Achievement = {
+      ...achievement,
+      id: uuidv4(),
+    };
+    setState(prev => ({
+      ...prev,
+      areas: updateAreasRecursively(prev.areas, areaId, area => ({
+        ...area,
+        achievements: [...(area.achievements ?? []), newAchievement],
+      })),
+    }));
+  }, []);
+
+  // Record completion (claim milestone or check off task): append to log, grant XP, and merge earned badges/titles/avatars
+  const completeAchievement = useCallback((
+    achievementId: string,
+    areaId: string,
+    xpReward: number = 0
+  ) => {
+    const now = new Date().toISOString();
+    setState(prev => {
+      const nextLog: CompletionLogEntry[] = [
+        ...prev.gamification.completionLog,
+        { achievementId, completedAt: now },
+      ];
+      const currentDomainXp = prev.gamification.domainXp[areaId] ?? 0;
+      const nextDomainXp = {
+        ...prev.gamification.domainXp,
+        [areaId]: currentDomainXp + xpReward,
+      };
+      const earnedBadges = getAllEarnedBadgeIds(prev.areas, calculateAreaProgressModel, nextLog);
+      const earnedTitles = getEarnedTitleIds(prev.areas, nextLog);
+      const earnedAvatars = getEarnedAvatarIds(prev.areas, nextLog);
+      const mergedBadges = [...new Set([...prev.gamification.unlockedBadges, ...earnedBadges])];
+      const mergedTitles = [...new Set([...prev.gamification.unlockedTitles, ...earnedTitles])];
+      const mergedAvatars = [...new Set([...prev.gamification.avatarUnlocks, ...earnedAvatars])];
+      return {
+        ...prev,
+        gamification: {
+          ...prev.gamification,
+          completionLog: nextLog,
+          domainXp: nextDomainXp,
+          unlockedBadges: mergedBadges,
+          unlockedTitles: mergedTitles,
+          avatarUnlocks: mergedAvatars,
+        },
+      };
+    });
+  }, []);
+
+  /** Number of times an achievement appears in the completion log. */
+  const getCompletionCount = useCallback((achievementId: string): number => {
+    return state.gamification.completionLog.filter(
+      (e) => e.achievementId === achievementId
+    ).length;
+  }, [state.gamification.completionLog]);
+
+  /** Whether a milestone has been claimed (at least one completion). */
+  const isAchievementCompleted = useCallback((achievementId: string): boolean => {
+    return state.gamification.completionLog.some((e) => e.achievementId === achievementId);
+  }, [state.gamification.completionLog]);
+
+  const setSelectedAvatar = useCallback((avatarId: string) => {
+    setState(prev => ({
+      ...prev,
+      gamification: { ...prev.gamification, selectedAvatar: avatarId },
+    }));
+  }, []);
+
+  const setSelectedTitle = useCallback((titleId: string) => {
+    setState(prev => ({
+      ...prev,
+      gamification: { ...prev.gamification, selectedTitle: titleId },
+    }));
+  }, []);
+
   // Calculate progress for an area (including children) based on aggregation mode
   const calculateAreaProgress = useCallback((area: Area): number => {
     return calculateAreaProgressModel(area);
   }, []);
+
+  // Milestone-based progress for radar "By milestones" view
+  const calculateMilestoneProgress = useCallback((area: Area): number => {
+    return calculateMilestoneProgressModel(area, state.gamification.completionLog);
+  }, [state.gamification.completionLog]);
 
   // Reset to initial data
   const resetData = useCallback(() => {
@@ -247,6 +339,7 @@ export const useDashboard = () => {
       areas: getDefaultAreas(),
       currentAreaId: null,
       breadcrumbs: [],
+      gamification: getDefaultGamificationState(),
     });
   }, []);
 
@@ -264,7 +357,14 @@ export const useDashboard = () => {
     addTracker,
     updateTracker,
     deleteTracker,
+    addAchievement,
+    completeAchievement,
+    getCompletionCount,
+    isAchievementCompleted,
+    setSelectedAvatar,
+    setSelectedTitle,
     calculateAreaProgress,
+    calculateMilestoneProgress,
     findArea,
     resetData,
   };

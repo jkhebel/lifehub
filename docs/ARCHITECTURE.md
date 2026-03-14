@@ -223,7 +223,9 @@ These outputs feed:
 
 Behavior is deterministic for the same tree and values. These formulas may live in the model layer (e.g. `src/model/` or `src/domain/`) or in a hook that the architecture later refactors into the model; see T2.
 
-**Gamification (levels, badges):** Future level and badge computations will live in the **model layer** (e.g. a `gamification` sub-module or functions alongside derived metrics). They will consume the same normalized completion and tree structure; exact formulas (e.g. level thresholds, badge triggers) are left to Game Design and Architect and are not locked in here. The character card and other UI will read precomputed level/badge values from the model.
+**Milestone progress:** The model layer also computes **milestone-based progress** per area from the completion log and area achievements (see §5). The bullseye can show either tracker-based or milestone-based progress via a view toggle.
+
+**Gamification (levels, badges, XP):** Level and badge computations live in the **model layer** (`src/model/gamification.ts` and derived metrics). They consume normalized completion, the achievement tree, and the completion log. The character card and other UI read precomputed level/badge/XP values from the model.
 
 ---
 
@@ -231,19 +233,17 @@ Behavior is deterministic for the same tree and values. These formulas may live 
 
 Gamification is layered **on top of** the JSON model and derived metrics.
 
-Potential surfaces:
+**Implemented surfaces:**
 
-- **Global character level**:
-  - Derived from aggregate completion across selected domains.
-- **Domain mastery levels**:
-  - Derived per-node based on normalized completion and/or time consistency.
-- **Badges**:
-  - Triggered by thresholds on normalized completion, streak length, or cumulative progress.
+- **Global character level (1–4):** Derived from aggregate tracker completion (average of root areas).
+- **XP and XP level:** Per-domain XP is stored in user state; global XP is the sum. XP level formula: `floor(sqrt(globalXp / 100)) + 1`. Tasks and milestones grant configurable `xpReward` on completion.
+- **Milestone progress:** Per-area progress based on completed milestones vs total milestones (from `area.achievements` and completion log). The bullseye supports a “By trackers” / “By milestones” view toggle.
+- **Badges:** Progress-based (Getting started, Halfway, On track, Fully balanced) and milestone-based (First milestone, Five milestones, Ten milestones). Unlocked badge ids are stored in user state.
+- **Cosmetics (titles, avatar):** Titles and avatar skins unlock by milestone count; user selects one title and one avatar to display on the character card. No currency or loot boxes.
 
-Architect and Game Design agents will define exact rules; the architecture only requires:
+**User state (gamification):** Persisted with the rest of dashboard state: `completionLog`, `domainXp`, `unlockedBadges`, `unlockedTitles`, `avatarUnlocks`, `selectedAvatar`, `selectedTitle`. See [JSON-MODEL.md](JSON-MODEL.md) §6.
 
-- A place in the model layer to compute and store these values.
-- Presentation components that can display them without baking in specific formulas.
+Architect and Game Design agents define exact rules and thresholds; the architecture keeps computation in the model layer and presentation in components.
 
 ---
 

@@ -7,3 +7,4 @@ export { Breadcrumbs } from './Breadcrumbs';
 export { DomainTree } from './DomainTree';
 export { CharacterCard } from './CharacterCard';
 export { StatEditor } from './StatEditor';
+export { AchievementsPanel } from './AchievementsPanel';

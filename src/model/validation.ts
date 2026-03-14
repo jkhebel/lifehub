@@ -1,4 +1,4 @@
-import { Area, Tracker, TrackerType } from '../types';
+import { Area, Tracker, TrackerType, AchievementKind } from '../types';
 
 export type ValidationResult<T> =
   | { ok: true; data: T }
@@ -11,6 +11,8 @@ const TRACKER_TYPES: TrackerType[] = [
   'boolean',
   'progress',
 ];
+
+const ACHIEVEMENT_KINDS: AchievementKind[] = ['milestone', 'task', 'project'];
 
 export const validateAreas = (raw: unknown): ValidationResult<Area[]> => {
   const errors: string[] = [];
@@ -58,13 +60,38 @@ export const validateAreas = (raw: unknown): ValidationResult<Area[]> => {
     return tracker as Tracker;
   };
 
+  const validateAchievement = (achievement: any, path: string): void => {
+    if (typeof achievement !== 'object' || achievement === null) {
+      errors.push(`${path} must be an object`);
+      return;
+    }
+    const { id, name, kind, areaId } = achievement;
+    if (typeof id !== 'string' || !id.trim()) {
+      errors.push(`${path}.id is required and must be a non-empty string`);
+    }
+    if (typeof name !== 'string' || !name.trim()) {
+      errors.push(`${path}.name is required and must be a non-empty string`);
+    }
+    if (!ACHIEVEMENT_KINDS.includes(kind)) {
+      errors.push(`${path}.kind must be one of ${ACHIEVEMENT_KINDS.join(', ')}`);
+    }
+    if (typeof areaId !== 'string' || !areaId.trim()) {
+      errors.push(`${path}.areaId is required and must be a non-empty string`);
+    }
+    if (Array.isArray(achievement.children)) {
+      achievement.children.forEach((child: any, i: number) =>
+        validateAchievement(child, `${path}.children[${i}]`)
+      );
+    }
+  };
+
   const validateArea = (area: any, indexPath: string): Area | null => {
     if (typeof area !== 'object' || area === null) {
       errors.push(`${indexPath} must be an object`);
       return null;
     }
 
-    const { id, name, color, parentId, trackers, children } = area;
+    const { id, name, color, parentId, trackers, children, achievements } = area;
 
     if (typeof id !== 'string' || !id.trim()) {
       errors.push(`${indexPath}.id is required and must be a non-empty string`);
@@ -101,6 +128,14 @@ export const validateAreas = (raw: unknown): ValidationResult<Area[]> => {
     if (Array.isArray(children)) {
       children.forEach((child, childIndex) =>
         validateArea(child, `${indexPath}.children[${childIndex}]`)
+      );
+    }
+
+    if (achievements !== undefined && !Array.isArray(achievements)) {
+      errors.push(`${indexPath}.achievements must be an array when present`);
+    } else if (Array.isArray(achievements)) {
+      achievements.forEach((a: any, i: number) =>
+        validateAchievement(a, `${indexPath}.achievements[${i}]`)
       );
     }
 

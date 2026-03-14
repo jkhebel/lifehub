@@ -2,6 +2,10 @@ import { describe, it, expect } from 'vitest';
 import {
   getTrackerProgress,
   calculateAreaProgress,
+  calculateMilestoneProgress,
+  calculateBlendedProgress,
+  getGlobalXp,
+  getXpLevel,
 } from './derivedMetrics';
 import type { Area, Tracker } from '../types';
 
@@ -94,5 +98,68 @@ describe('calculateAreaProgress', () => {
       children: [child],
     };
     expect(calculateAreaProgress(area)).toBe(100);
+  });
+});
+
+describe('calculateMilestoneProgress', () => {
+  it('returns 0 when area has no achievements', () => {
+    const area: Area = {
+      id: 'a',
+      name: 'A',
+      color: '#333',
+      parentId: null,
+      trackers: [],
+      children: [],
+    };
+    expect(calculateMilestoneProgress(area, [])).toBe(0);
+  });
+
+  it('returns 0–100 based on completed milestones', () => {
+    const area: Area = {
+      id: 'a',
+      name: 'A',
+      color: '#333',
+      parentId: null,
+      trackers: [],
+      children: [],
+      achievements: [
+        { id: 'm1', name: 'M1', kind: 'milestone', areaId: 'a' },
+        { id: 'm2', name: 'M2', kind: 'milestone', areaId: 'a' },
+      ],
+    };
+    expect(calculateMilestoneProgress(area, [])).toBe(0);
+    expect(calculateMilestoneProgress(area, [{ achievementId: 'm1', completedAt: '2025-01-01' }])).toBe(50);
+    expect(calculateMilestoneProgress(area, [
+      { achievementId: 'm1', completedAt: '2025-01-01' },
+      { achievementId: 'm2', completedAt: '2025-01-02' },
+    ])).toBe(100);
+  });
+});
+
+describe('calculateBlendedProgress', () => {
+  it('returns tracker progress when area has no milestones', () => {
+    const area: Area = {
+      id: 'a',
+      name: 'A',
+      color: '#333',
+      parentId: null,
+      trackers: [{ id: 't', name: 'T', type: 'number', value: 5, target: 10 } as Tracker],
+      children: [],
+    };
+    const getTracker = (a: Area) => calculateAreaProgress(a);
+    expect(calculateBlendedProgress(area, [], getTracker, 0.5)).toBe(50);
+  });
+});
+
+describe('getGlobalXp and getXpLevel', () => {
+  it('sums domain XP', () => {
+    expect(getGlobalXp({})).toBe(0);
+    expect(getGlobalXp({ health: 100, growth: 50 })).toBe(150);
+  });
+
+  it('returns XP level from global XP', () => {
+    expect(getXpLevel(0)).toBe(1);
+    expect(getXpLevel(100)).toBe(2);  // sqrt(1)+1 = 2
+    expect(getXpLevel(400)).toBe(3);   // sqrt(4)+1 = 3
   });
 });

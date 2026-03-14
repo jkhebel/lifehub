@@ -6,6 +6,7 @@ import {
   AddAreaModal,
   DomainTree,
   CharacterCard,
+  AchievementsPanel,
 } from './components';
 import { useDashboard } from './hooks/useDashboard';
 import type { Area } from './types';
@@ -34,7 +35,14 @@ function App() {
     addTracker,
     updateTracker,
     deleteTracker,
+    addAchievement,
+    completeAchievement,
+    getCompletionCount,
+    isAchievementCompleted,
+    setSelectedAvatar,
+    setSelectedTitle,
     calculateAreaProgress,
+    calculateMilestoneProgress,
     resetData,
   } = useDashboard();
 
@@ -42,8 +50,15 @@ function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [areaToDeleteId, setAreaToDeleteId] = useState<string | null>(null);
   const [showGamification, setShowGamification] = useState(true);
+  const [radarView, setRadarView] = useState<'trackers' | 'milestones'>('trackers');
+  const [xpToast, setXpToast] = useState<number | null>(null);
 
   const breadcrumbs = getBreadcrumbAreas();
+
+  const handleXpGained = (amount: number) => {
+    setXpToast(amount);
+    setTimeout(() => setXpToast(null), 2000);
+  };
 
   const handleAddArea = (name: string, color: string, icon?: string) => {
     addArea(currentArea?.id || null, name, color);
@@ -156,9 +171,35 @@ function App() {
             aria-label="Radar chart overview"
             className="lg:col-span-7 flex flex-col items-center order-1"
           >
-            <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3 self-start">
-              Radar
-            </h2>
+            <div className="flex items-center justify-between w-full mb-3">
+              <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wider">
+                Radar
+              </h2>
+              <div className="inline-flex rounded-lg border border-slate-300 overflow-hidden" role="group" aria-label="Radar progress view">
+                <button
+                  type="button"
+                  onClick={() => setRadarView('trackers')}
+                  className={`px-3 py-1.5 text-sm transition-colors ${
+                    radarView === 'trackers'
+                      ? 'bg-sky-500 text-white'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  By trackers
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRadarView('milestones')}
+                  className={`px-3 py-1.5 text-sm transition-colors ${
+                    radarView === 'milestones'
+                      ? 'bg-sky-500 text-white'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  By milestones
+                </button>
+              </div>
+            </div>
             {/* Current area info */}
             {currentArea && (
               <div className="mb-4 text-center">
@@ -181,13 +222,13 @@ function App() {
                     : []
               }
               onAreaClick={(areaId) => navigateToArea(areaId)}
-              calculateProgress={calculateAreaProgress}
+              calculateProgress={radarView === 'milestones' ? calculateMilestoneProgress : calculateAreaProgress}
               centerLabel={currentArea?.name || 'Life'}
               onCenterClick={currentArea ? navigateUp : undefined}
             />
 
             {/* Legend / Sub-areas count */}
-            <div className="mt-4 text-center">
+            <div className="mt-4 text-center space-y-1">
               <p className="text-slate-500 text-sm">
                 {displayAreas.length > 0
                   ? `${displayAreas.length} area${displayAreas.length !== 1 ? 's' : ''} • Click an axis to focus and log trackers`
@@ -196,6 +237,11 @@ function App() {
                     : 'Select a domain in the list or add areas to see your radar.'
                 }
               </p>
+              {radarView === 'milestones' && (
+                <p className="text-slate-400 text-xs">
+                  Add milestones in each domain (Milestones & tasks panel) to see progress here.
+                </p>
+              )}
             </div>
 
           </section>
@@ -209,6 +255,9 @@ function App() {
               areas={state.areas}
               calculateProgress={calculateAreaProgress}
               showGamification={showGamification}
+              gamification={state.gamification}
+              onSelectAvatar={setSelectedAvatar}
+              onSelectTitle={setSelectedTitle}
             >
               <DomainTree
                 areas={state.areas}
@@ -233,11 +282,11 @@ function App() {
           </section>
         </div>
 
-        {/* Lower row: trackers only */}
+        {/* Lower row: trackers and achievements */}
         <div className="grid lg:grid-cols-12 gap-6 lg:gap-8 items-start">
           <section
             aria-label="Trackers and editors"
-            className="lg:col-span-12"
+            className="lg:col-span-7"
           >
             <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">
               Trackers
@@ -252,6 +301,22 @@ function App() {
               onDeleteAreaRequest={(id) => setAreaToDeleteId(id)}
             />
           </section>
+          <section
+            aria-label="Milestones and tasks"
+            className="lg:col-span-5"
+          >
+            <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">
+              Milestones & tasks
+            </h2>
+            <AchievementsPanel
+              area={currentArea}
+              onAddAchievement={addAchievement}
+              onCompleteAchievement={completeAchievement}
+              getCompletionCount={getCompletionCount}
+              isAchievementCompleted={isAchievementCompleted}
+              onXpGained={handleXpGained}
+            />
+          </section>
         </div>
       </main>
 
@@ -262,6 +327,17 @@ function App() {
         onAdd={handleAddArea}
         parentName={currentArea?.name}
       />
+
+      {/* XP gained toast */}
+      {xpToast !== null && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-lg bg-amber-500 text-white font-semibold shadow-lg animate-fade-in"
+        >
+          +{xpToast} XP
+        </div>
+      )}
 
       {/* Click outside to close settings */}
       {showSettings && (

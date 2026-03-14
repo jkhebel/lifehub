@@ -1,8 +1,28 @@
-import { DashboardState } from '../types';
+import { DashboardState, getDefaultGamificationState } from '../types';
 import { validateAreas } from '../model/validation';
 import { getDefaultAreas } from '../config/loadConfig';
 
 const STORAGE_KEY = 'life-dashboard-data';
+
+/** Merge saved state with defaults so new fields (e.g. gamification) are always present. */
+function normalizeLoadedState(parsed: DashboardState): DashboardState {
+  const defaultGamification = getDefaultGamificationState();
+  const g = parsed.gamification;
+  return {
+    areas: parsed.areas,
+    currentAreaId: parsed.currentAreaId ?? null,
+    breadcrumbs: Array.isArray(parsed.breadcrumbs) ? parsed.breadcrumbs : [],
+    gamification: {
+      completionLog: Array.isArray(g?.completionLog) ? g.completionLog : defaultGamification.completionLog,
+      domainXp: g?.domainXp && typeof g.domainXp === 'object' ? g.domainXp : defaultGamification.domainXp,
+      unlockedBadges: Array.isArray(g?.unlockedBadges) ? g.unlockedBadges : defaultGamification.unlockedBadges,
+      unlockedTitles: Array.isArray(g?.unlockedTitles) ? g.unlockedTitles : defaultGamification.unlockedTitles,
+      avatarUnlocks: Array.isArray(g?.avatarUnlocks) ? g.avatarUnlocks : defaultGamification.avatarUnlocks,
+      selectedAvatar: typeof g?.selectedAvatar === 'string' ? g.selectedAvatar : defaultGamification.selectedAvatar,
+      selectedTitle: typeof g?.selectedTitle === 'string' ? g.selectedTitle : defaultGamification.selectedTitle,
+    },
+  };
+}
 
 export const loadDashboardState = <T extends DashboardState>(
   createDefault: () => T
@@ -15,20 +35,20 @@ export const loadDashboardState = <T extends DashboardState>(
   if (!saved) return createDefault();
 
   try {
-    const parsed = JSON.parse(saved) as T;
+    const parsed = JSON.parse(saved) as DashboardState;
     // Minimal shape check: must have areas array
-    if (!parsed || !Array.isArray((parsed as DashboardState).areas)) {
+    if (!parsed || !Array.isArray(parsed.areas)) {
       return createDefault();
     }
     // Validate restored areas; fall back to default tree if corrupted
-    const validation = validateAreas((parsed as DashboardState).areas);
+    const validation = validateAreas(parsed.areas);
     if (!validation.ok) {
       return {
-        ...parsed,
+        ...normalizeLoadedState(parsed),
         areas: getDefaultAreas(),
       } as T;
     }
-    return parsed;
+    return normalizeLoadedState(parsed) as T;
   } catch {
     return createDefault();
   }
