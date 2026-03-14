@@ -228,7 +228,7 @@ Behavior is deterministic for the same tree and values. The bullseye and charact
 
 ## 5. Gamification
 
-Gamification (XP, level, completion log) is implemented. The app persists optional `gamification` (`totalXp`, `completionLog`). Binary domains set to done add a completion entry and award XP; character level is derived from total XP. The character card shows level and XP bar. When an area is deleted, its id and all descendant ids are removed from `pinnedAreaIds`. Radar: relative view (progress to next level per axis, tier labels) and objective view (absolute %); optional multi-series show multiple polygons and a legend. See PROJECT.md and the roadmap.
+Gamification (XP, level, completion log) is implemented. The app persists optional `gamification` (`totalXp`, `completionLog`). Binary domains set to done add a completion entry and award XP; character level is derived from total XP. The character card shows **title** (Level N), XP bar, and **badges**: a minimal set derived from completion count (e.g. First steps at 1, Getting started at 3, Building momentum at 5). Badge thresholds and labels are defined in the CharacterCard (or a small helper) so Game Design/Architect can tune without changing persistence. When an area is deleted, its id and all descendant ids are removed from `pinnedAreaIds`. Radar: relative view (progress to next level per axis, tier labels) and objective view (absolute %); optional multi-series show multiple polygons and a legend. See PROJECT.md and the roadmap.
 
 ---
 

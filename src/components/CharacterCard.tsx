@@ -2,6 +2,17 @@ import type { ReactNode } from 'react';
 import type { Area, GamificationState } from '../types';
 import { getLevelFromXp, getXpProgressInLevel } from '../model/gamification';
 
+/** Badge thresholds (completion count → label). Kept in one place for Game Design tuning. */
+const BADGE_THRESHOLDS: { count: number; label: string }[] = [
+  { count: 1, label: 'First steps' },
+  { count: 3, label: 'Getting started' },
+  { count: 5, label: 'Building momentum' },
+];
+
+function getEarnedBadges(completionCount: number): string[] {
+  return BADGE_THRESHOLDS.filter((t) => completionCount >= t.count).map((t) => t.label);
+}
+
 export interface CharacterCardProps {
   /** Top-level domains to display (same data as bullseye). */
   areas: Area[];
@@ -33,6 +44,8 @@ export const CharacterCard = ({
 
   const xpState = gamification ? getXpProgressInLevel(gamification.totalXp) : null;
   const level = gamification ? getLevelFromXp(gamification.totalXp) : null;
+  const completionCount = gamification?.completionLog?.length ?? 0;
+  const earnedBadges = getEarnedBadges(completionCount);
 
   return (
     <div className="rounded-[10px] border-2 border-indigo-300/90 bg-white/95 overflow-hidden border-t-indigo-200 border-l-indigo-200 card-paper">
@@ -46,13 +59,19 @@ export const CharacterCard = ({
       </div>
 
       <div className="p-4 space-y-4">
+        {level != null && (
+          <div className="flex items-center gap-2">
+            <span className="text-slate-500 text-sm">Title</span>
+            <span className="text-slate-800 font-medium">Level {level}</span>
+          </div>
+        )}
         {level != null && xpState != null && (
           <div className="flex items-center justify-between gap-4">
-            <span className="text-slate-500 text-sm">Level {level}</span>
+            <span className="text-slate-500 text-sm">XP</span>
             <div className="flex-1 min-w-0 max-w-[180px]">
               <div className="flex justify-between text-xs text-slate-500 mb-1">
                 <span>XP</span>
-                <span>{gamification.totalXp} XP</span>
+                <span>{gamification?.totalXp ?? 0} XP</span>
               </div>
               <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
                 <div
@@ -79,6 +98,22 @@ export const CharacterCard = ({
             </div>
           </div>
         </div>
+
+        {earnedBadges.length > 0 && (
+          <div>
+            <span className="text-slate-500 text-sm block mb-1.5">Badges</span>
+            <div className="flex flex-wrap gap-2">
+              {earnedBadges.map((label) => (
+                <span
+                  key={label}
+                  className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800 border border-amber-200"
+                >
+                  {label}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
 
         {completionByArea.length > 0 && (
           <div className="flex flex-wrap gap-x-3 gap-y-1.5">
