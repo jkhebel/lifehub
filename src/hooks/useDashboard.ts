@@ -64,7 +64,13 @@ export const useDashboard = () => {
       });
     }, 500);
     return () => {
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = null;
+        saveRemoteState(userId, state).catch((err) => {
+          console.error('Failed to sync dashboard state to account', err);
+        });
+      }
     };
   }, [state, user?.id]);
 
