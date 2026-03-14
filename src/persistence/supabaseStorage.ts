@@ -28,10 +28,11 @@ export async function loadRemoteState(userId: string): Promise<DashboardState | 
 export async function saveRemoteState(userId: string, state: DashboardState): Promise<void> {
   const supabase = getSupabase();
   if (!supabase) return;
-  await supabase
+  const { error } = await supabase
     .from(TABLE)
     .upsert(
       { user_id: userId, state, updated_at: new Date().toISOString() },
       { onConflict: 'user_id' }
     );
+  if (error) throw new Error(error.message);
 }

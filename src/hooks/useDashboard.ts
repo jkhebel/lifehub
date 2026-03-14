@@ -47,7 +47,8 @@ export const useDashboard = () => {
 
   // Persist: local when no user, remote (debounced) when user
   useEffect(() => {
-    if (!user) {
+    const userId = user?.id;
+    if (!userId) {
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
         saveTimeoutRef.current = null;
@@ -58,14 +59,14 @@ export const useDashboard = () => {
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     saveTimeoutRef.current = setTimeout(() => {
       saveTimeoutRef.current = null;
-      saveRemoteState(user.id, state).catch(() => {
-        // Ignore network/DB errors; state remains in memory
+      saveRemoteState(userId, state).catch((err) => {
+        console.error('Failed to sync dashboard state to account', err);
       });
     }, 500);
     return () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     };
-  }, [state, user]);
+  }, [state, user?.id]);
 
   const findArea = useCallback((areas: Area[], id: string): Area | null => {
     for (const area of areas) {
