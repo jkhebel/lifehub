@@ -51,7 +51,7 @@ export const BullseyeDiagram = ({
           width="100%"
           height="100%"
           viewBox={`0 0 ${size} ${size}`}
-          className="max-w-md aspect-square bg-white rounded-xl border-2 border-slate-200 shadow-[4px_4px_0_rgba(148,163,184,0.4)]"
+          className="max-w-md aspect-square bg-white rounded-[10px] border-2 border-slate-300 border-t-slate-200 border-l-slate-200 card-paper"
         >
           <text
             x={center}
@@ -104,7 +104,7 @@ export const BullseyeDiagram = ({
         width="100%"
         height="100%"
         viewBox={viewBox}
-        className="max-w-md aspect-square bg-white rounded-xl border-2 border-slate-200 shadow-[4px_4px_0_rgba(148,163,184,0.4)]"
+        className="max-w-md aspect-square bg-white rounded-[10px] border-2 border-slate-300 border-t-slate-200 border-l-slate-200 card-paper"
         style={{ overflow: 'visible' }}
       >
         {/* Concentric polygon rings (grid) */}

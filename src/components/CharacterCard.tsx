@@ -1,8 +1,5 @@
-import {
-  getBadges,
-  getGlobalLevel,
-  getPerDomainLevels,
-} from '../model/gamification';
+import type { ReactNode } from 'react';
+import { getBadges, getGlobalLevel } from '../model/gamification';
 import { Area } from '../types';
 
 export interface CharacterCardProps {
@@ -12,12 +9,15 @@ export interface CharacterCardProps {
   calculateProgress: (area: Area) => number;
   /** When false, hide explicit gamey chrome (levels/badges) but keep stats. */
   showGamification?: boolean;
+  /** Optional: Domains tree and Add Area button rendered inside the card. */
+  children?: ReactNode;
 }
 
 export const CharacterCard = ({
   areas,
   calculateProgress,
   showGamification = true,
+  children,
 }: CharacterCardProps) => {
   const completionByArea = areas.map((area) => ({
     area,
@@ -29,11 +29,10 @@ export const CharacterCard = ({
       : completionByArea.reduce((sum, { progress }) => sum + progress, 0) /
         completionByArea.length;
   const level = getGlobalLevel(areas, calculateProgress);
-  const perDomainLevels = getPerDomainLevels(areas, calculateProgress);
   const badges = getBadges(areas, calculateProgress);
 
   return (
-    <div className="rounded-[12px] border-2 border-indigo-200 bg-white/90 overflow-hidden shadow-[3px_3px_0_0_rgba(129,140,248,0.7),inset_0_1px_0_rgba(255,255,255,0.9)]">
+    <div className="rounded-[10px] border-2 border-indigo-300/90 bg-white/95 overflow-hidden border-t-indigo-200 border-l-indigo-200 card-paper">
       {/* Character sheet header */}
       <div className="px-4 py-3 border-b border-indigo-100 bg-indigo-50">
         <h2 className="text-lg font-bold text-indigo-700 tracking-wide">
@@ -95,69 +94,7 @@ export const CharacterCard = ({
           </div>
         )}
 
-        {/* Top-level domain stats (same metrics as bullseye) */}
-        <div className="border-t border-slate-200 pt-3">
-          <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-            Domains
-          </h3>
-          {completionByArea.length > 0 && (
-            <p className="text-[11px] text-slate-500 mb-2">
-              {(() => {
-                const sorted = [...completionByArea].sort(
-                  (a, b) => b.progress - a.progress
-                );
-                const strongest = sorted[0];
-                const weakest = sorted[sorted.length - 1];
-                if (!strongest) return null;
-                if (sorted.length === 1) {
-                  return `Strongest focus: ${strongest.area.name}`;
-                }
-                return `Strongest: ${strongest.area.name} • Needs support: ${weakest.area.name}`;
-              })()}
-            </p>
-          )}
-          <ul className="space-y-2">
-            {completionByArea.map(({ area, progress }) => {
-              const domainLevel =
-                perDomainLevels.find((d) => d.areaId === area.id)?.level ?? 1;
-              return (
-                <li
-                  key={area.id}
-                  className="flex items-center gap-2 text-sm"
-                >
-                  {area.icon && (
-                    <span className="shrink-0 text-base" aria-hidden>
-                      {area.icon}
-                    </span>
-                  )}
-                  <span
-                    className="min-w-0 truncate text-slate-200"
-                    style={{ color: area.color }}
-                  >
-                    {area.name}
-                  </span>
-                  {showGamification && (
-                    <span className="shrink-0 text-slate-500 text-xs tabular-nums">
-                      Lv.{domainLevel}
-                    </span>
-                  )}
-                  <span className="shrink-0 text-slate-500 tabular-nums ml-auto">
-                    {Math.round(progress)}%
-                  </span>
-                <div className="w-16 h-1.5 bg-slate-200 rounded-full overflow-hidden shrink-0">
-                  <div
-                    className="h-full rounded-full transition-all duration-300"
-                    style={{
-                      width: `${progress}%`,
-                      backgroundColor: area.color,
-                    }}
-                  />
-                </div>
-              </li>
-              );
-            })}
-          </ul>
-        </div>
+        {children}
       </div>
     </div>
   );

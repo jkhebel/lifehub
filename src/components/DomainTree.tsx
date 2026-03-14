@@ -11,6 +11,8 @@ export interface DomainTreeProps {
   showGamification?: boolean;
   /** Move area to new parent (null = root) at optional index. */
   onMoveArea?: (areaId: string, newParentId: string | null, index?: number) => void;
+  /** When true, render without card border (for use inside CharacterCard). */
+  nested?: boolean;
 }
 
 interface FlatNode {
@@ -44,6 +46,7 @@ export const DomainTree = ({
   calculateProgress,
   showGamification = true,
   onMoveArea,
+  nested = false,
 }: DomainTreeProps) => {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(() => new Set());
   const [focusedIndex, setFocusedIndex] = useState<number>(0);
@@ -92,8 +95,7 @@ export const DomainTree = ({
             return;
           }
           const node = flatNodes[focusedIndex - 1];
-          if (node.hasChildren) toggleExpand(node.area.id);
-          else onSelect(node.area.id);
+          onSelect(node.area.id);
           return;
         }
         case 'ArrowRight': {
@@ -159,23 +161,29 @@ export const DomainTree = ({
 
   return (
     <div
-      className="rounded-[8px] border-2 border-amber-200/80 bg-white/95 overflow-hidden shadow-[3px_3px_0_rgba(251,191,36,0.35),inset_0_1px_0_rgba(255,255,255,0.8)]"
+      className={
+        nested
+          ? 'border-t border-indigo-100 overflow-hidden pt-2 -mx-4 px-4'
+          : 'rounded-[8px] border-2 border-amber-300/90 bg-white/95 overflow-hidden border-t-amber-200 border-l-amber-200 card-paper'
+      }
       role="tree"
       aria-label="Domains"
       tabIndex={0}
       onKeyDown={handleKeyDown}
     >
-      <div className="px-2 py-1.5 border-b border-amber-100 bg-amber-50/80">
+      <div className={nested ? 'px-0 py-1.5' : 'px-2 py-1.5 border-b border-amber-100 bg-amber-50/80'}>
         <div className="flex items-center justify-between gap-2">
-          <span className="text-[11px] font-semibold text-amber-800/80 uppercase tracking-wider">
+          <span className={`text-[11px] font-semibold uppercase tracking-wider ${nested ? 'text-indigo-700/80' : 'text-amber-800/80'}`}>
             Domains
           </span>
-          <span className="text-[10px] text-amber-700/60 hidden sm:inline">
-            ↑↓ · Enter · Drag to move
-          </span>
+          {!nested && (
+            <span className="text-[10px] text-amber-700/60 hidden sm:inline">
+              ↑↓ · Enter · Drag to move
+            </span>
+          )}
         </div>
       </div>
-      <ul className="py-1 max-h-[380px] overflow-y-auto" role="group">
+      <ul className={`py-1 overflow-y-auto ${nested ? 'max-h-[320px]' : 'max-h-[380px]'}`} role="group">
         {/* Life root */}
         <li
           role="treeitem"
@@ -226,8 +234,7 @@ export const DomainTree = ({
               `}
               onClick={() => {
                 setFocusedIndex(rowIndex);
-                if (node.hasChildren) toggleExpand(node.area.id);
-                else onSelect(node.area.id);
+                onSelect(node.area.id);
               }}
             >
               {node.hasChildren ? (
@@ -256,12 +263,14 @@ export const DomainTree = ({
               {showGamification && (
                 <span className="shrink-0 text-[10px] text-amber-700/80 tabular-nums">Lv.{level}</span>
               )}
-              <span className="shrink-0 text-slate-500 text-[11px] tabular-nums">{Math.round(progress)}%</span>
-              <div className="w-10 h-1 bg-slate-200 rounded-full overflow-hidden shrink-0">
-                <div
-                  className="h-full rounded-full transition-all duration-300"
-                  style={{ width: `${progress}%`, backgroundColor: node.area.color }}
-                />
+              <div className="ml-auto flex items-center gap-1.5 shrink-0">
+                <span className="text-slate-500 text-[11px] tabular-nums">{Math.round(progress)}%</span>
+                <div className="w-12 h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-300"
+                    style={{ width: `${progress}%`, backgroundColor: node.area.color }}
+                  />
+                </div>
               </div>
             </li>
           );
