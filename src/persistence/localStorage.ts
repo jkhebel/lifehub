@@ -1,8 +1,18 @@
-import { DashboardState } from '../types';
+import type { DashboardState } from '../types';
 import { validateAreas } from '../model/validation';
 import { getDefaultAreas } from '../config/loadConfig';
 
 const STORAGE_KEY = 'life-dashboard-data';
+
+/** Normalize loaded state: areas, currentAreaId, breadcrumbs, pinnedAreaIds. */
+function normalizeLoadedState(parsed: Partial<DashboardState>): DashboardState {
+  return {
+    areas: Array.isArray(parsed.areas) ? parsed.areas : getDefaultAreas(),
+    currentAreaId: parsed.currentAreaId ?? null,
+    breadcrumbs: Array.isArray(parsed.breadcrumbs) ? parsed.breadcrumbs : [],
+    pinnedAreaIds: Array.isArray(parsed.pinnedAreaIds) ? parsed.pinnedAreaIds : [],
+  };
+}
 
 export const loadDashboardState = <T extends DashboardState>(
   createDefault: () => T
@@ -15,20 +25,15 @@ export const loadDashboardState = <T extends DashboardState>(
   if (!saved) return createDefault();
 
   try {
-    const parsed = JSON.parse(saved) as T;
-    // Minimal shape check: must have areas array
-    if (!parsed || !Array.isArray((parsed as DashboardState).areas)) {
+    const parsed = JSON.parse(saved) as Partial<DashboardState>;
+    if (!parsed || !Array.isArray(parsed.areas)) {
       return createDefault();
     }
-    // Validate restored areas; fall back to default tree if corrupted
-    const validation = validateAreas((parsed as DashboardState).areas);
+    const validation = validateAreas(parsed.areas);
     if (!validation.ok) {
-      return {
-        ...parsed,
-        areas: getDefaultAreas(),
-      } as T;
+      return createDefault();
     }
-    return parsed;
+    return normalizeLoadedState(parsed) as T;
   } catch {
     return createDefault();
   }
@@ -39,7 +44,6 @@ export const persistDashboardState = (state: DashboardState): void => {
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   } catch {
-    // Ignore persistence errors; app will fall back to defaults on next load
+    // Ignore persistence errors
   }
 };
-

@@ -6,19 +6,19 @@ Design details for the Life Dashboard app, aligned with [PROJECT.md](PROJECT.md)
 
 ## JSON stat-tree schema
 
-The Phase 1 data model is the **Area** and **Tracker** stat tree. Full field list, validation expectations, and a minimal JSON example are in **[docs/JSON-MODEL.md](JSON-MODEL.md)**. That document is the schema reference for implementation (T1) and config loading (T10).
+The Phase 1 data model is the **Area** tree with optional **DomainMetric** per node. Full field list, validation expectations, and a minimal JSON example are in **[docs/JSON-MODEL.md](JSON-MODEL.md)**. That document is the schema reference for implementation and config loading.
 
 Summary:
 
-- **Tree:** Root is an array of **Area** objects; each area has `id`, `name`, `color`, `trackers[]`, `children[]` (nested areas), `parentId`, and optional `targetProgress`, `targetDate`, `aggregation` (average | weighted | minimum).
-- **Stats:** Each **Tracker** has `id`, `name`, `type` (number | percentage | level | boolean | progress), `value`, and optional `target`, `min`, `max`, `unit`, `weight`.
-- **Validation:** A validation function must accept valid JSON and reject malformed input (e.g. missing `id`, non-array `children`); see T1 in [TASKS.md](TASKS.md).
+- **Tree:** Root is an array of **Area** objects; each area has `id`, `name`, `color`, `children[]` (nested areas), `parentId`, optional `metric` (binary, progress, or stages), and optional `aggregation` (average | minimum) when deriving from children.
+- **Metrics:** Each area may have at most one **DomainMetric** — binary (done/not), progress (current/max, optional unit), or stages (ordered list + current index). Progress is derived from the metric or by aggregating children.
+- **Validation:** A validation function must accept valid JSON and reject malformed input (e.g. missing `id`, non-array `children`, or legacy `trackers`/`achievements`); see [TASKS.md](TASKS.md).
 
 ---
 
 ## Derived metrics and progress
 
-Completion (0–100%) is derived per tracker then aggregated per area. Formulas are documented in [ARCHITECTURE.md](ARCHITECTURE.md) §4.2. The same derived metrics feed the bullseye and the character card; no view-specific derivation.
+Completion (0–100%) is derived per node from its metric (or by aggregating children when no metric). Formulas are documented in [ARCHITECTURE.md](ARCHITECTURE.md) §4.2. The same derived metrics feed the bullseye and the character card; no view-specific derivation.
 
 ---
 

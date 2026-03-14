@@ -7,27 +7,51 @@ const validTree = [
     name: 'Health',
     color: '#22c55e',
     parentId: null,
-    trackers: [
-      {
-        id: 'workouts',
-        name: 'Workouts',
-        type: 'number',
-        value: 3,
-        target: 5,
-      },
-    ],
     children: [],
   },
 ];
 
 describe('validateAreas', () => {
-  it('accepts a valid area tree', () => {
+  it('accepts a valid area tree (no metric)', () => {
     const result = validateAreas(validTree);
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.data).toHaveLength(1);
       expect(result.data[0].id).toBe('health');
-      expect(result.data[0].trackers[0].type).toBe('number');
+      expect(result.data[0].children).toEqual([]);
+    }
+  });
+
+  it('accepts area with binary metric', () => {
+    const tree = [
+      { id: 'a', name: 'A', color: '#333', parentId: null, children: [], metric: { type: 'binary', value: 1 } },
+    ];
+    const result = validateAreas(tree);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data[0].metric).toEqual({ type: 'binary', value: 1 });
+    }
+  });
+
+  it('accepts area with progress metric', () => {
+    const tree = [
+      { id: 'a', name: 'A', color: '#333', parentId: null, children: [], metric: { type: 'progress', current: 5, max: 10 } },
+    ];
+    const result = validateAreas(tree);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data[0].metric).toEqual({ type: 'progress', current: 5, max: 10 });
+    }
+  });
+
+  it('accepts area with stages metric', () => {
+    const tree = [
+      { id: 'a', name: 'A', color: '#333', parentId: null, children: [], metric: { type: 'stages', currentIndex: 1, stages: ['N5', 'N4', 'N3'] } },
+    ];
+    const result = validateAreas(tree);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data[0].metric).toEqual({ type: 'stages', currentIndex: 1, stages: ['N5', 'N4', 'N3'] });
     }
   });
 
@@ -41,13 +65,7 @@ describe('validateAreas', () => {
 
   it('rejects area with missing id', () => {
     const bad = [
-      {
-        name: 'Health',
-        color: '#22c55e',
-        parentId: null,
-        trackers: [],
-        children: [],
-      },
+      { name: 'Health', color: '#22c55e', parentId: null, children: [] },
     ];
     const result = validateAreas(bad);
     expect(result.ok).toBe(false);
@@ -58,14 +76,7 @@ describe('validateAreas', () => {
 
   it('rejects area with non-array children', () => {
     const bad = [
-      {
-        id: 'a',
-        name: 'A',
-        color: '#333',
-        parentId: null,
-        trackers: [],
-        children: 'not-an-array',
-      },
+      { id: 'a', name: 'A', color: '#333', parentId: null, children: 'not-an-array' },
     ];
     const result = validateAreas(bad);
     expect(result.ok).toBe(false);
@@ -74,23 +85,49 @@ describe('validateAreas', () => {
     }
   });
 
-  it('rejects tracker with invalid type', () => {
+  it('rejects area with trackers (old shape)', () => {
     const bad = [
-      {
-        id: 'a',
-        name: 'A',
-        color: '#333',
-        parentId: null,
-        trackers: [
-          { id: 't1', name: 'T1', type: 'invalid', value: 0 },
-        ],
-        children: [],
-      },
+      { id: 'a', name: 'A', color: '#333', parentId: null, trackers: [], children: [] },
     ];
     const result = validateAreas(bad);
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.errors.some((e) => e.includes('type'))).toBe(true);
+      expect(result.errors.some((e) => e.toLowerCase().includes('tracker'))).toBe(true);
     }
+  });
+
+  it('rejects area with achievements (old shape)', () => {
+    const bad = [
+      { id: 'a', name: 'A', color: '#333', parentId: null, children: [], achievements: [] },
+    ];
+    const result = validateAreas(bad);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors.some((e) => e.toLowerCase().includes('achievement'))).toBe(true);
+    }
+  });
+
+  it('rejects binary metric with invalid value', () => {
+    const bad = [
+      { id: 'a', name: 'A', color: '#333', parentId: null, children: [], metric: { type: 'binary', value: 2 } },
+    ];
+    const result = validateAreas(bad);
+    expect(result.ok).toBe(false);
+  });
+
+  it('rejects progress metric with missing max', () => {
+    const bad = [
+      { id: 'a', name: 'A', color: '#333', parentId: null, children: [], metric: { type: 'progress', current: 5 } },
+    ];
+    const result = validateAreas(bad);
+    expect(result.ok).toBe(false);
+  });
+
+  it('rejects stages metric with empty stages', () => {
+    const bad = [
+      { id: 'a', name: 'A', color: '#333', parentId: null, children: [], metric: { type: 'stages', currentIndex: 0, stages: [] } },
+    ];
+    const result = validateAreas(bad);
+    expect(result.ok).toBe(false);
   });
 });

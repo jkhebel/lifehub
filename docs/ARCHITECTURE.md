@@ -1,6 +1,6 @@
 # Life Dashboard — Architecture
 
-High-level structure, boundaries, and data flow for the Life Dashboard app. Lead/Test/Docs/UI/Game agents use this to decide what to build and where. The JSON stat-tree model is introduced in `docs/PROJECT.md`. The Phase 1 schema (Area/Tracker shapes, validation expectations) is defined in [docs/JSON-MODEL.md](JSON-MODEL.md); design details may also appear in `docs/DESIGN.md` where applicable.
+High-level structure, boundaries, and data flow for the Life Dashboard app. Lead/Test/Docs/UI/Game agents use this to decide what to build and where. The JSON stat-tree model is introduced in `docs/PROJECT.md`. The Phase 1 schema (Area, optional DomainMetric, validation expectations) is defined in [docs/JSON-MODEL.md](JSON-MODEL.md); design details may also appear in `docs/DESIGN.md` where applicable.
 
 ---
 
@@ -146,18 +146,16 @@ Implementation options:
 Core components include:
 
 - `DomainTree`:
-  - Renders nested domains/subdomains.
-  - Allows selection and basic editing (rename/add/remove) where supported.
-- `Bullseye`:
-  - Draws concentric rings and segments based on derived metrics.
-  - Should be responsive and accessible (e.g. tooltips or labels for segments).
+  - Renders nested domains/subdomains with inline metric summary (e.g. `250/2000`, `N3`, `Done`) and progress per row.
+  - Single click selects; double-click opens the domain edit modal. Drag-and-drop: drop on the thin strip above a row reorders siblings; drop on a row moves the domain as a child of that row. Sibling order is manual (array order); no separate bottom panel.
+- `BullseyeDiagram`:
+  - Draws concentric rings and segments based on derived metrics. Responsive and accessible (labels, center click to navigate up).
 - `CharacterCard`:
-  - Shows key stats, level, and flavor text.
-  - Pulls from the same derived metrics used by the bullseye.
-- `StatEditors`:
-  - Controls to adjust current values, targets, or metadata.
+  - Shows overall progress and a **Pinned** section (when any domains are pinned) above the domain tree. Pinned chips navigate to that domain; star on a chip unpins. Contains the domain tree and "Add domain" button.
+- `DomainModal`:
+  - Single modal for both **Add domain** and **Edit domain** (opened by "Add domain" or double-clicking a row). Fields: name, emoji, color (add only), metric toggle (No metric / Metric) and type-specific inputs (binary, progress, stages). Edit mode only: "Pin to favorites" checkbox, "Delete this domain" (triggers confirmation dialog). When an area is deleted, its id and all descendant ids are removed from `pinnedAreaIds`.
 - Layout and chrome:
-  - Shell, navigation, settings, etc.
+  - Shell, breadcrumbs, settings, radar + character card grid (no bottom domain panel).
 
 Each component should consume **typed props** derived from the model and avoid directly poking into raw JSON where possible.
 
@@ -179,7 +177,7 @@ Constraints:
 
 ### 4.1 JSON configuration source and schema
 
-The stat-tree shape (Area, Tracker, aggregation) is documented in [docs/JSON-MODEL.md](JSON-MODEL.md). Config may be loaded from a bundled default or from user-supplied JSON; the model layer consumes a validated structure only.
+The stat-tree shape (Area, optional DomainMetric, aggregation) is documented in [docs/JSON-MODEL.md](JSON-MODEL.md). Config may be loaded from a bundled default or from user-supplied JSON; the model layer consumes a validated structure only.
 
 In the near term, there are two primary ways the app might receive its JSON:
 
@@ -209,41 +207,28 @@ These outputs feed:
 - The character card (headline stats).
 - Any future charts or reports.
 
-**Current progress formulas (Phase 1 implementation):**
+**Current progress (Phase 1 — unified domain metrics):**
 
-- **Per-tracker completion (0–100%):**
-  - `boolean`: 100 if value truthy, else 0.
-  - If `target` present: `min((value / target) * 100, 100)`.
-  - Else if `max` present: `(value / max) * 100`.
-  - Else: 50 (no target/max).
-- **Per-area completion:** Combine tracker and child completions using the area’s `aggregation`:
-  - `average` (default): mean of all tracker and child completion values.
-  - `weighted`: weighted mean using each tracker’s `weight` (default 1) and child weight 1.
-  - `minimum`: minimum of all tracker and child completion values.
+A single function **`calculateDomainProgress(domain)`** in the model layer (`src/model/derivedMetrics.ts`) computes 0–100% per node:
 
-Behavior is deterministic for the same tree and values. These formulas may live in the model layer (e.g. `src/model/` or `src/domain/`) or in a hook that the architecture later refactors into the model; see T2.
+- **If the node has a `metric`:**
+  - **binary:** 100 if `value === 1`, else 0.
+  - **progress:** `min(100, (current / max) * 100)` when `max > 0`; else 0.
+  - **stages:** If `stages.length <= 1`, 100 when `currentIndex === 0` else 0; else `(currentIndex / (stages.length - 1)) * 100`.
+- **Else if the node has children:** Aggregate children’s progress using the node’s `aggregation`:
+  - `average` (default): mean of children’s progress.
+  - `minimum`: minimum of children’s progress.
+- **Else:** 0 (leaf with no metric).
 
-**Gamification (levels, badges):** Future level and badge computations will live in the **model layer** (e.g. a `gamification` sub-module or functions alongside derived metrics). They will consume the same normalized completion and tree structure; exact formulas (e.g. level thresholds, badge triggers) are left to Game Design and Architect and are not locked in here. The character card and other UI will read precomputed level/badge values from the model.
+Behavior is deterministic for the same tree and values. The bullseye and character card both use this single progress value; there is no separate “trackers vs milestones” source.
+
+**Gamification (deferred):** Levels, badges, and XP are not in scope for the current refactor. When re-added, they can be keyed off “binary domain completed” and optional progress/stages thresholds; see PROJECT.md and the roadmap.
 
 ---
 
-## 5. Gamification Surfaces
+## 5. Gamification (deferred)
 
-Gamification is layered **on top of** the JSON model and derived metrics.
-
-Potential surfaces:
-
-- **Global character level**:
-  - Derived from aggregate completion across selected domains.
-- **Domain mastery levels**:
-  - Derived per-node based on normalized completion and/or time consistency.
-- **Badges**:
-  - Triggered by thresholds on normalized completion, streak length, or cumulative progress.
-
-Architect and Game Design agents will define exact rules; the architecture only requires:
-
-- A place in the model layer to compute and store these values.
-- Presentation components that can display them without baking in specific formulas.
+Gamification (XP, badges, avatar, titles) is **deferred** until after the unified domain-metrics refactor and trial usage. The app currently persists `areas`, `currentAreaId`, `breadcrumbs`, and `pinnedAreaIds` (favorite domain ids for quick access). When an area is deleted, its id and all descendant ids are removed from `pinnedAreaIds` so the list stays consistent. When gamification is re-added, it can be keyed off “binary domain completed” and optional progress/stages thresholds; user state for gamification can be reintroduced in a later phase. See PROJECT.md and the roadmap.
 
 ---
 

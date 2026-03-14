@@ -1,16 +1,42 @@
-import { Area, Tracker, TrackerType } from '../types';
+import type { Area } from '../types';
 
 export type ValidationResult<T> =
   | { ok: true; data: T }
   | { ok: false; errors: string[] };
 
-const TRACKER_TYPES: TrackerType[] = [
-  'number',
-  'percentage',
-  'level',
-  'boolean',
-  'progress',
-];
+/** Old shape: areas with trackers or achievements are invalid (clean slate). */
+function hasOldShape(area: any): boolean {
+  if (area.trackers !== undefined) return true;
+  if (area.achievements !== undefined) return true;
+  if (Array.isArray(area.children)) {
+    return area.children.some((c: any) => hasOldShape(c));
+  }
+  return false;
+}
+
+function validateMetric(metric: any): boolean {
+  if (typeof metric !== 'object' || metric === null) {
+    return false;
+  }
+  const { type } = metric;
+  if (type === 'binary') {
+    if (metric.value !== 0 && metric.value !== 1) {
+      return false;
+    }
+    return true;
+  }
+  if (type === 'progress') {
+    if (typeof metric.current !== 'number' || Number.isNaN(metric.current)) return false;
+    if (typeof metric.max !== 'number' || Number.isNaN(metric.max)) return false;
+    return true;
+  }
+  if (type === 'stages') {
+    if (typeof metric.currentIndex !== 'number' || Number.isNaN(metric.currentIndex)) return false;
+    if (!Array.isArray(metric.stages) || metric.stages.length === 0) return false;
+    return true;
+  }
+  return false;
+}
 
 export const validateAreas = (raw: unknown): ValidationResult<Area[]> => {
   const errors: string[] = [];
@@ -22,49 +48,18 @@ export const validateAreas = (raw: unknown): ValidationResult<Area[]> => {
     };
   }
 
-  const validateTracker = (tracker: any, path: string): Tracker | null => {
-    if (typeof tracker !== 'object' || tracker === null) {
-      errors.push(`${path} must be an object`);
-      return null;
-    }
-
-    const { id, name, type, value } = tracker;
-
-    if (typeof id !== 'string' || !id.trim()) {
-      errors.push(`${path}.id is required and must be a non-empty string`);
-    }
-
-    if (typeof name !== 'string' || !name.trim()) {
-      errors.push(`${path}.name is required and must be a non-empty string`);
-    }
-
-    if (!TRACKER_TYPES.includes(type)) {
-      errors.push(
-        `${path}.type must be one of ${TRACKER_TYPES.join(', ')}`
-      );
-    }
-
-    if (typeof value !== 'number' || Number.isNaN(value)) {
-      errors.push(`${path}.value is required and must be a number`);
-    }
-
-    // Minimal range checks for percentage type
-    if (type === 'percentage' && typeof value === 'number') {
-      if (value < 0 || value > 100) {
-        errors.push(`${path}.value must be between 0 and 100 for percentage trackers`);
-      }
-    }
-
-    return tracker as Tracker;
-  };
-
   const validateArea = (area: any, indexPath: string): Area | null => {
     if (typeof area !== 'object' || area === null) {
       errors.push(`${indexPath} must be an object`);
       return null;
     }
 
-    const { id, name, color, parentId, trackers, children } = area;
+    if (hasOldShape(area)) {
+      errors.push(`${indexPath}: old shape (trackers/achievements) is not supported; use default tree`);
+      return null;
+    }
+
+    const { id, name, color, parentId, children, metric, aggregation } = area;
 
     if (typeof id !== 'string' || !id.trim()) {
       errors.push(`${indexPath}.id is required and must be a non-empty string`);
@@ -79,27 +74,25 @@ export const validateAreas = (raw: unknown): ValidationResult<Area[]> => {
     }
 
     if (parentId !== null && typeof parentId !== 'string') {
-      errors.push(
-        `${indexPath}.parentId must be a string or null`
-      );
-    }
-
-    if (!Array.isArray(trackers)) {
-      errors.push(`${indexPath}.trackers must be an array`);
+      errors.push(`${indexPath}.parentId must be a string or null`);
     }
 
     if (!Array.isArray(children)) {
       errors.push(`${indexPath}.children must be an array`);
     }
 
-    if (Array.isArray(trackers)) {
-      trackers.forEach((t, trackerIndex) =>
-        validateTracker(t, `${indexPath}.trackers[${trackerIndex}]`)
-      );
+    if (metric !== undefined && metric !== null) {
+      if (!validateMetric(metric)) {
+        errors.push(`${indexPath}.metric must be a valid binary, progress, or stages metric`);
+      }
+    }
+
+    if (aggregation !== undefined && aggregation !== 'average' && aggregation !== 'minimum') {
+      errors.push(`${indexPath}.aggregation must be 'average' or 'minimum' when present`);
     }
 
     if (Array.isArray(children)) {
-      children.forEach((child, childIndex) =>
+      children.forEach((child: any, childIndex: number) =>
         validateArea(child, `${indexPath}.children[${childIndex}]`)
       );
     }
@@ -117,4 +110,3 @@ export const validateAreas = (raw: unknown): ValidationResult<Area[]> => {
 
   return { ok: true, data: raw as Area[] };
 };
-

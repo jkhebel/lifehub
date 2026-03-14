@@ -22,9 +22,9 @@ We avoid over-engineering complex game systems before the basic model, visualiza
 
 | Phase | Focus | Status |
 | --- | --- | --- |
-| **Phase 1** | MVP: JSON stat-tree, bullseye + card views, local persistence | This plan |
-| **Phase 2** | Gamification: levels, badges, domain mastery, UX polish | Placeholder |
-| **Phase 3+** | Integrations: templates, import/export, optional sync/sharing | Placeholder |
+| **Phase 1** | MVP: JSON stat-tree, bullseye + card views, local persistence | Done |
+| **Phase 2** | Gamification: levels, badges, milestones/tasks, XP, cosmetics, radar toggle | In progress |
+| **Phase 3+** | Integrations: templates, import/export, optional sync (e.g. Todoist/Google Tasks) | Placeholder |
 
 ---
 
@@ -102,6 +102,8 @@ Later phases may explore:
   - Provide curated stat trees for common goals (e.g. language learning, fitness, creative practice).
 - **Optional sync/sharing**:
   - Opt-in mechanisms to sync data across devices or share read-only views (e.g. a static snapshot of your bullseye/character card).
+- **Optional task-app sync (e.g. Todoist, Google Tasks)**:
+  - Map external tasks to areas (and optionally to achievements) so completions can count toward domain XP. Requires user configuration and OAuth; Security/Privacy review for any networked integration.
 
 Any networked or social features must maintain a strong bias toward privacy and user control.
 

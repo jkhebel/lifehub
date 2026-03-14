@@ -1,18 +1,27 @@
-export interface Tracker {
-  id: string;
-  name: string;
-  type: 'number' | 'percentage' | 'level' | 'boolean' | 'progress';
-  value: number;
-  target?: number;
-  min?: number;
-  max?: number;
-  unit?: string;
-  color?: string;
-  /** Used when parent area aggregation is 'weighted'. Default 1. */
-  weight?: number;
+/** Metric for a leaf or override: binary (done/not), progress (current/max), or stages (ordered list). */
+export interface BinaryMetric {
+  type: 'binary';
+  value: 0 | 1;
 }
 
-export type AggregationMode = 'average' | 'weighted' | 'minimum';
+export interface ProgressMetric {
+  type: 'progress';
+  current: number;
+  max: number;
+  unit?: string;
+  target?: number;
+}
+
+export interface StagesMetric {
+  type: 'stages';
+  currentIndex: number;
+  stages: string[];
+}
+
+export type DomainMetric = BinaryMetric | ProgressMetric | StagesMetric;
+
+/** How to aggregate child progress. v1: average or minimum only. */
+export type AggregationMode = 'average' | 'minimum';
 
 export interface Area {
   id: string;
@@ -20,14 +29,11 @@ export interface Area {
   color: string;
   icon?: string;
   description?: string;
-  trackers: Tracker[];
   children: Area[];
   parentId: string | null;
-  /** Target progress 0-100 for this area. */
-  targetProgress?: number;
-  /** ISO date string, e.g. "2025-12-31". */
-  targetDate?: string;
-  /** How to aggregate tracker and child progress. Default 'average'. */
+  /** Optional metric: if set, progress comes from this; else from children (or 0 if leaf). */
+  metric?: DomainMetric;
+  /** How to aggregate child progress when no metric. Default 'average'. */
   aggregation?: AggregationMode;
 }
 
@@ -35,17 +41,9 @@ export interface DashboardState {
   areas: Area[];
   currentAreaId: string | null;
   breadcrumbs: string[];
+  /** Pinned (favorite) domain ids for quick access. Order preserved. */
+  pinnedAreaIds: string[];
 }
-
-export type TrackerType = Tracker['type'];
-
-export const TRACKER_TYPES: { value: TrackerType; label: string }[] = [
-  { value: 'number', label: 'Number' },
-  { value: 'percentage', label: 'Percentage' },
-  { value: 'level', label: 'Level' },
-  { value: 'progress', label: 'Progress Bar' },
-  { value: 'boolean', label: 'Yes/No' },
-];
 
 export const DEFAULT_COLORS = [
   '#3b82f6', // blue
@@ -56,4 +54,9 @@ export const DEFAULT_COLORS = [
   '#ec4899', // pink
   '#06b6d4', // cyan
   '#f97316', // orange
+];
+
+export const AGGREGATION_MODES: { value: AggregationMode; label: string }[] = [
+  { value: 'average', label: 'Average' },
+  { value: 'minimum', label: 'Minimum' },
 ];

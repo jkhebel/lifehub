@@ -1,22 +1,20 @@
-import { Area } from '../types';
+import type { Area } from '../types';
 import { validateAreas } from '../model/validation';
-import { createInitialData } from '../data/initialData';
-import defaultConfigJson from '../data/defaultConfig.json';
+import { getResetAreas } from '../data/initialData';
 
 /**
  * Parse raw config (e.g. from localStorage or import). Returns validated Area[]
- * or falls back to createInitialData() on invalid input.
+ * or falls back to default six OG domains on invalid input or old shape.
  */
 export function parseConfig(raw: unknown): Area[] {
   const result = validateAreas(raw);
   if (result.ok) return result.data;
-  return createInitialData();
+  return getResetAreas();
 }
 
 /**
- * Load the bundled default JSON config, validate it, and return Area[].
- * Falls back to createInitialData() if the bundled default is invalid.
+ * Default tree: six OG top-level domains (new shape, no metrics).
  */
 export function getDefaultAreas(): Area[] {
-  return parseConfig(defaultConfigJson);
+  return getResetAreas();
 }

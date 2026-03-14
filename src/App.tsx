@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import {
   BullseyeDiagram,
-  TrackerPanel,
   Breadcrumbs,
-  AddAreaModal,
+  DomainModal,
   DomainTree,
   CharacterCard,
 } from './components';
@@ -29,34 +28,25 @@ function App() {
     getBreadcrumbAreas,
     addArea,
     updateArea,
+    updateDomainMetric,
     deleteArea,
     moveArea,
-    addTracker,
-    updateTracker,
-    deleteTracker,
-    calculateAreaProgress,
+    calculateDomainProgress,
     resetData,
+    togglePin,
+    findArea,
   } = useDashboard();
 
   const [isAddingArea, setIsAddingArea] = useState(false);
+  const [areaToEdit, setAreaToEdit] = useState<Area | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [areaToDeleteId, setAreaToDeleteId] = useState<string | null>(null);
-  const [showGamification, setShowGamification] = useState(true);
 
   const breadcrumbs = getBreadcrumbAreas();
-
-  const handleAddArea = (name: string, color: string, icon?: string) => {
-    addArea(currentArea?.id || null, name, color);
-    // If icon provided, update the area (simplified - in real app would pass icon to addArea)
-    if (icon) {
-      // The addArea creates the area, we'd need to get its ID to update
-      // For now, icon is handled in the modal
-    }
-  };
+  const isDomainModalOpen = isAddingArea || areaToEdit != null;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-sky-50 via-amber-50 to-pink-50 text-slate-900">
-      {/* Header */}
       <header className="border-b border-indigo-100/80 bg-white/80 backdrop-blur-sm sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
@@ -70,26 +60,21 @@ function App() {
                 </div>
               )}
             </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setShowSettings(!showSettings)}
-                className="flex items-center gap-2 px-2 py-1 text-slate-500 hover:text-slate-900 hover:bg-indigo-100 rounded-[6px] border border-indigo-200 transition-colors text-sm"
-                type="button"
-                aria-haspopup="dialog"
-                aria-expanded={showSettings}
-                aria-controls="settings-panel"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                <span className="hidden sm:inline">Settings</span>
-              </button>
-            </div>
+            <button
+              onClick={() => setShowSettings(!showSettings)}
+              className="flex items-center gap-2 px-2 py-1 text-slate-500 hover:text-slate-900 hover:bg-indigo-100 rounded-[6px] border border-indigo-200 transition-colors text-sm"
+              type="button"
+              aria-haspopup="dialog"
+              aria-expanded={showSettings}
+              aria-controls="settings-panel"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              <span className="hidden sm:inline">Settings</span>
+            </button>
           </div>
-
-          {/* Mobile breadcrumbs */}
           {breadcrumbs.length > 0 && (
             <div className="sm:hidden mt-3">
               <Breadcrumbs areas={breadcrumbs} onNavigate={navigateToArea} />
@@ -98,39 +83,22 @@ function App() {
         </div>
       </header>
 
-      {/* Settings dropdown */}
       {showSettings && (
         <div
           id="settings-panel"
           role="dialog"
           aria-modal="false"
           aria-label="Settings"
-          className="absolute right-4 top-16 bg-white border border-indigo-100 rounded-xl shadow-[4px_4px_0_0_rgba(129,140,248,0.6)] z-50 p-4 w-72"
+          className="absolute right-4 top-16 bg-white border border-indigo-100 rounded-xl shadow-lg z-50 p-4 w-72"
         >
           <h3 className="font-medium mb-2">Settings</h3>
           <p className="text-slate-500 text-xs mb-4">
-            Tune how Life Dashboard feels. Changes affect only this browser.
+            Changes affect only this browser.
           </p>
-
           <div className="space-y-3">
-            <label className="flex items-start gap-2 text-sm text-slate-800">
-              <input
-                type="checkbox"
-                className="mt-1 rounded border-indigo-300 bg-indigo-50 text-sky-700 focus:ring-sky-500"
-                checked={showGamification}
-                onChange={(e) => setShowGamification(e.target.checked)}
-              />
-              <span>
-                Show levels and badges
-                <span className="block text-xs text-slate-500">
-                  Toggle RPG-style elements in the character card while keeping stats intact.
-                </span>
-              </span>
-            </label>
-
             <button
               onClick={() => {
-                if (confirm('Reset all areas and trackers to the built-in defaults? This cannot be undone.')) {
+                if (confirm('Reset all domains to the built-in defaults? This cannot be undone.')) {
                   resetData();
                 }
                 setShowSettings(false);
@@ -141,17 +109,14 @@ function App() {
               Reset to defaults
             </button>
             <p className="text-slate-500 text-xs">
-              Your configuration and progress are stored locally in this browser only.
+              Your data is stored locally in this browser only.
             </p>
           </div>
         </div>
       )}
 
-      {/* Main content */}
       <main className="max-w-7xl mx-auto px-4 py-6 md:py-8">
-        {/* Top row: radar chart (left) and quick summary (right) */}
         <div className="grid lg:grid-cols-12 gap-6 lg:gap-8 items-start mb-8">
-          {/* Radar chart section */}
           <section
             aria-label="Radar chart overview"
             className="lg:col-span-7 flex flex-col items-center order-1"
@@ -159,7 +124,6 @@ function App() {
             <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3 self-start">
               Radar
             </h2>
-            {/* Current area info */}
             {currentArea && (
               <div className="mb-4 text-center">
                 <h2 className="text-2xl font-extrabold flex items-center justify-center gap-2 tracking-tight">
@@ -181,43 +145,77 @@ function App() {
                     : []
               }
               onAreaClick={(areaId) => navigateToArea(areaId)}
-              calculateProgress={calculateAreaProgress}
+              calculateProgress={calculateDomainProgress}
               centerLabel={currentArea?.name || 'Life'}
               onCenterClick={currentArea ? navigateUp : undefined}
             />
 
-            {/* Legend / Sub-areas count */}
             <div className="mt-4 text-center">
               <p className="text-slate-500 text-sm">
                 {displayAreas.length > 0
-                  ? `${displayAreas.length} area${displayAreas.length !== 1 ? 's' : ''} • Click an axis to focus and log trackers`
+                  ? `${displayAreas.length} domain${displayAreas.length !== 1 ? 's' : ''} • Click an axis to focus • Set metrics to see progress`
                   : currentArea
-                    ? 'Single domain — add sub-areas or log trackers here.'
-                    : 'Select a domain in the list or add areas to see your radar.'
+                    ? 'Single domain — add subdomains or set a metric here.'
+                    : 'Select a domain in the list or add domains to see your radar.'
                 }
               </p>
             </div>
-
           </section>
 
-          {/* Right column: Character card (with Domains + Add Area inside) */}
           <section
             aria-label="Character and domains"
             className="lg:col-span-5 order-2"
           >
             <CharacterCard
               areas={state.areas}
-              calculateProgress={calculateAreaProgress}
-              showGamification={showGamification}
+              calculateProgress={calculateDomainProgress}
             >
+              {state.pinnedAreaIds.length > 0 && (
+                <div className="mb-3 pb-3 border-b border-indigo-100">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-indigo-700/80">
+                    Pinned
+                  </span>
+                  <div className="flex flex-wrap gap-1.5 mt-1.5">
+                    {state.pinnedAreaIds.map((id) => {
+                      const area = findArea(state.areas, id);
+                      if (!area) return null;
+                      return (
+                        <button
+                          key={id}
+                          type="button"
+                          onClick={() => navigateToArea(id)}
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-sm font-medium border border-indigo-200 bg-indigo-50/80 hover:bg-indigo-100/80 text-indigo-800 transition-colors"
+                        >
+                          {area.icon && <span>{area.icon}</span>}
+                          <span className="truncate max-w-[120px]">{area.name}</span>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              togglePin(id);
+                            }}
+                            className="p-0.5 -mr-0.5 rounded hover:bg-indigo-200/80 text-amber-600"
+                            aria-label="Unpin"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                            </svg>
+                          </button>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
               <DomainTree
                 areas={state.areas}
                 selectedAreaId={state.currentAreaId}
                 onSelect={navigateToArea}
-                calculateProgress={calculateAreaProgress}
-                showGamification={showGamification}
+                calculateProgress={calculateDomainProgress}
+                showGamification={false}
                 onMoveArea={moveArea}
                 nested
+                onEditArea={(area) => setAreaToEdit(area)}
               />
               <button
                 type="button"
@@ -227,43 +225,45 @@ function App() {
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
-                Add Area
+                Add domain
               </button>
             </CharacterCard>
           </section>
         </div>
-
-        {/* Lower row: trackers only */}
-        <div className="grid lg:grid-cols-12 gap-6 lg:gap-8 items-start">
-          <section
-            aria-label="Trackers and editors"
-            className="lg:col-span-12"
-          >
-            <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">
-              Trackers
-            </h2>
-            <TrackerPanel
-              area={currentArea}
-              onUpdateArea={updateArea}
-              onUpdateTracker={updateTracker}
-              onDeleteTracker={deleteTracker}
-              onAddTracker={addTracker}
-              calculateProgress={calculateAreaProgress}
-              onDeleteAreaRequest={(id) => setAreaToDeleteId(id)}
-            />
-          </section>
-        </div>
       </main>
 
-      {/* Add Area Modal */}
-      <AddAreaModal
-        isOpen={isAddingArea}
-        onClose={() => setIsAddingArea(false)}
-        onAdd={handleAddArea}
+      <DomainModal
+        isOpen={isDomainModalOpen}
+        mode={areaToEdit != null ? 'edit' : 'add'}
+        onClose={() => {
+          setIsAddingArea(false);
+          setAreaToEdit(null);
+        }}
         parentName={currentArea?.name}
+        parentId={currentArea?.id ?? null}
+        area={areaToEdit}
+        onAdd={
+          isDomainModalOpen && areaToEdit == null
+            ? (name, color, initial) => {
+                addArea(currentArea?.id ?? null, name, color, initial);
+                setIsAddingArea(false);
+              }
+            : undefined
+        }
+        onUpdateArea={areaToEdit ? updateArea : undefined}
+        onUpdateDomainMetric={areaToEdit ? updateDomainMetric : undefined}
+        onDeleteRequest={
+          areaToEdit
+            ? (id) => {
+                setAreaToDeleteId(id);
+                setAreaToEdit(null);
+              }
+            : undefined
+        }
+        isPinned={areaToEdit ? state.pinnedAreaIds.includes(areaToEdit.id) : false}
+        onTogglePin={areaToEdit ? togglePin : undefined}
       />
 
-      {/* Click outside to close settings */}
       {showSettings && (
         <div
           className="fixed inset-0 z-40"
@@ -272,7 +272,6 @@ function App() {
         />
       )}
 
-      {/* Delete area dialog */}
       {areaToDeleteId && (() => {
         const areaToDelete = findAreaById(state.areas, areaToDeleteId);
         if (!areaToDelete) return null;
@@ -280,7 +279,6 @@ function App() {
           <DeleteAreaDialog
             areaName={areaToDelete.name}
             onConfirm={() => {
-              if (currentArea?.id === areaToDeleteId) navigateUp();
               deleteArea(areaToDeleteId);
               setAreaToDeleteId(null);
             }}
@@ -309,38 +307,37 @@ const DeleteAreaDialog = ({
     className="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
     role="dialog"
     aria-modal="true"
-    aria-label="Delete area"
+    aria-label="Delete domain"
     onClick={onCancel}
   >
     <div
-      className="bg-white border-2 border-slate-200 rounded-xl p-5 w-full max-w-sm shadow-[4px_4px_0_rgba(148,163,184,0.4)]"
+      className="bg-white border-2 border-slate-200 rounded-xl p-5 w-full max-w-sm shadow-lg"
       onClick={(e) => e.stopPropagation()}
     >
-      <h2 className="text-lg font-semibold mb-3 text-rose-600">Delete area</h2>
+      <h2 className="text-lg font-semibold mb-3 text-rose-600">Delete domain</h2>
       <p className="text-sm text-slate-700 mb-2">
         Are you sure you want to delete <span className="font-semibold">{areaName}</span> and
-        all of its sub-areas and trackers?
+        all of its subdomains?
       </p>
       <p className="text-xs text-slate-500 mb-4">
-        This action cannot be undone, but you can always recreate the area later.
+        This cannot be undone.
       </p>
       <div className="flex justify-end gap-2">
         <button
           type="button"
           onClick={onCancel}
-          className="px-3 py-1.5 text-sm rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+          className="px-3 py-1.5 text-sm rounded-lg text-slate-600 hover:bg-slate-100"
         >
           Cancel
         </button>
         <button
           type="button"
           onClick={onConfirm}
-          className="px-3 py-1.5 text-sm rounded-lg bg-rose-500 hover:bg-rose-600 text-white transition-colors"
+          className="px-3 py-1.5 text-sm rounded-lg bg-rose-500 hover:bg-rose-600 text-white"
         >
-          Delete area
+          Delete
         </button>
       </div>
     </div>
   </div>
 );
-

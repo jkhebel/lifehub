@@ -322,6 +322,34 @@ Out:
 
 ---
 
+## T11 — Achievements, milestones, tasks, and gamification (Phase 2)
+
+**Title:** Achievements (milestones/tasks/projects), XP, badges, cosmetics, radar milestone view.
+
+**Scope:**
+In:
+
+- **Model:** Achievement type and optional `achievements` on Area; GamificationState (completionLog, domainXp, unlockedBadges, unlockedTitles, avatarUnlocks, selectedAvatar, selectedTitle). Validation for achievements. Derived: milestone progress per area, XP level, earned badges/titles/avatars.
+- **Persistence:** Persist gamification state with dashboard state; normalize on load for backward compatibility.
+- **UI:** Achievements panel per area (add/complete milestones and tasks, XP feedback toast); bullseye view toggle “By trackers” / “By milestones”; character card shows avatar, title, XP level, and progress + milestone badges.
+- **Docs:** JSON-MODEL (§6 Achievement), ARCHITECTURE (§5 gamification), PLAN (Phase 2/3), this task.
+
+Out:
+
+- Todoist/Google Tasks sync (Phase 3); complex game economy.
+
+**Acceptance criteria:**
+
+- User can add milestones, tasks, and projects to an area; claim milestones and complete tasks; see XP gain and unlocked badges/titles/avatars.
+- Radar can display progress by trackers or by milestone completion.
+- Character card shows selected avatar and title, level, XP level, and badges. State persists.
+
+**Files touched:** `src/types/`, `src/model/` (derivedMetrics, gamification, validation), `src/persistence/`, `src/hooks/useDashboard.ts`, `src/components/` (AchievementsPanel, CharacterCard, BullseyeDiagram), `src/App.tsx`, `docs/`.
+
+**Validation:** Manual: add achievement, complete, check XP and badges; toggle radar view. Unit tests for derived metrics and gamification.
+
+---
+
 ## Summary
 
 | ID | Title |
@@ -336,3 +364,4 @@ Out:
 | T8 | Developer workflow alignment |
 | T9 | Early gamification hooks (Phase 2 prep) |
 | T10 | Config loading and default tree (optional follow-up to T1) |
+| T11 | Achievements, milestones, tasks, and gamification (Phase 2) |
