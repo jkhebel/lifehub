@@ -2,6 +2,21 @@ import { useState, useCallback, useMemo, useEffect } from 'react';
 import { Area } from '../types';
 import { progressToLevel } from '../model/gamification';
 
+/** Format metric as short string for tree row; null if no metric. */
+function formatMetricSummary(area: Area): string | null {
+  const m = area.metric;
+  if (!m) return null;
+  if (m.type === 'binary') return m.value === 1 ? 'Done' : '—';
+  if (m.type === 'progress') {
+    const suffix = m.unit ? ` ${m.unit}` : '';
+    return `${m.current}/${m.max}${suffix}`;
+  }
+  if (m.type === 'stages' && m.stages.length > 0) {
+    return m.stages[Math.min(m.currentIndex, m.stages.length - 1)] ?? null;
+  }
+  return null;
+}
+
 export interface DomainTreeProps {
   areas: Area[];
   selectedAreaId: string | null;
@@ -13,6 +28,8 @@ export interface DomainTreeProps {
   onMoveArea?: (areaId: string, newParentId: string | null, index?: number) => void;
   /** When true, render without card border (for use inside CharacterCard). */
   nested?: boolean;
+  /** Double-click a domain row to open edit modal. */
+  onEditArea?: (area: Area) => void;
 }
 
 interface FlatNode {
@@ -47,6 +64,7 @@ export const DomainTree = ({
   showGamification = true,
   onMoveArea,
   nested = false,
+  onEditArea,
 }: DomainTreeProps) => {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(() => new Set());
   const [focusedIndex, setFocusedIndex] = useState<number>(0);
@@ -236,6 +254,12 @@ export const DomainTree = ({
                 setFocusedIndex(rowIndex);
                 onSelect(node.area.id);
               }}
+              onDoubleClick={(e) => {
+                e.stopPropagation();
+                onEditArea?.(node.area);
+              }}
+              title={onEditArea ? 'Double-click to edit' : undefined}
+              aria-label={onEditArea ? `${node.area.name}. Double-click to edit.` : undefined}
             >
               {node.hasChildren ? (
                 <button
@@ -260,10 +284,16 @@ export const DomainTree = ({
               >
                 {node.area.name}
               </span>
+              {formatMetricSummary(node.area) && (
+                <span className="shrink-0 text-slate-500 text-xs tabular-nums">
+                  {formatMetricSummary(node.area)}
+                </span>
+              )}
+              <div className="flex-1 min-w-2" aria-hidden />
               {showGamification && (
                 <span className="shrink-0 text-[10px] text-amber-700/80 tabular-nums">Lv.{level}</span>
               )}
-              <div className="ml-auto flex items-center gap-1.5 shrink-0">
+              <div className="flex items-center gap-1.5 shrink-0">
                 <span className="text-slate-500 text-[11px] tabular-nums">{Math.round(progress)}%</span>
                 <div className="w-12 h-1.5 bg-slate-200 rounded-full overflow-hidden">
                   <div

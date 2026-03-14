@@ -2,10 +2,9 @@ import { useState } from 'react';
 import {
   BullseyeDiagram,
   Breadcrumbs,
-  AddAreaModal,
+  DomainModal,
   DomainTree,
   CharacterCard,
-  DomainPanel,
 } from './components';
 import { useDashboard } from './hooks/useDashboard';
 import type { Area } from './types';
@@ -37,17 +36,12 @@ function App() {
   } = useDashboard();
 
   const [isAddingArea, setIsAddingArea] = useState(false);
+  const [areaToEdit, setAreaToEdit] = useState<Area | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [areaToDeleteId, setAreaToDeleteId] = useState<string | null>(null);
 
   const breadcrumbs = getBreadcrumbAreas();
-
-  const handleAddArea = (name: string, color: string, icon?: string) => {
-    addArea(currentArea?.id ?? null, name, color);
-    if (icon) {
-      // New area was just added; we could look it up by name to set icon (simplified)
-    }
-  };
+  const isDomainModalOpen = isAddingArea || areaToEdit != null;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-sky-50 via-amber-50 to-pink-50 text-slate-900">
@@ -182,6 +176,7 @@ function App() {
                 showGamification={false}
                 onMoveArea={moveArea}
                 nested
+                onEditArea={(area) => setAreaToEdit(area)}
               />
               <button
                 type="button"
@@ -196,30 +191,36 @@ function App() {
             </CharacterCard>
           </section>
         </div>
-
-        <div className="grid lg:grid-cols-12 gap-6 lg:gap-8 items-start">
-          <section aria-label="Current domain" className="lg:col-span-12">
-            <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">
-              Domain
-            </h2>
-            <DomainPanel
-              area={currentArea}
-              calculateProgress={calculateDomainProgress}
-              onUpdateArea={updateArea}
-              onUpdateDomainMetric={updateDomainMetric}
-              onAddArea={addArea}
-              onSelectArea={navigateToArea}
-              onDeleteAreaRequest={(id) => setAreaToDeleteId(id)}
-            />
-          </section>
-        </div>
       </main>
 
-      <AddAreaModal
-        isOpen={isAddingArea}
-        onClose={() => setIsAddingArea(false)}
-        onAdd={handleAddArea}
+      <DomainModal
+        isOpen={isDomainModalOpen}
+        mode={areaToEdit != null ? 'edit' : 'add'}
+        onClose={() => {
+          setIsAddingArea(false);
+          setAreaToEdit(null);
+        }}
         parentName={currentArea?.name}
+        parentId={currentArea?.id ?? null}
+        area={areaToEdit}
+        onAdd={
+          isDomainModalOpen && areaToEdit == null
+            ? (name, color, initial) => {
+                addArea(currentArea?.id ?? null, name, color, initial);
+                setIsAddingArea(false);
+              }
+            : undefined
+        }
+        onUpdateArea={areaToEdit ? updateArea : undefined}
+        onUpdateDomainMetric={areaToEdit ? updateDomainMetric : undefined}
+        onDeleteRequest={
+          areaToEdit
+            ? (id) => {
+                setAreaToDeleteId(id);
+                setAreaToEdit(null);
+              }
+            : undefined
+        }
       />
 
       {showSettings && (

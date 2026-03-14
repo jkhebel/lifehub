@@ -89,27 +89,37 @@ export const useDashboard = () => {
     });
   };
 
-  const addArea = useCallback((parentId: string | null, name: string, color: string) => {
-    const newArea: Area = {
-      id: uuidv4(),
-      name,
-      color,
-      parentId,
-      children: [],
-    };
-    setState(prev => {
-      if (parentId === null) {
-        return { ...prev, areas: [...prev.areas, newArea] };
-      }
-      return {
-        ...prev,
-        areas: updateAreasRecursively(prev.areas, parentId, area => ({
-          ...area,
-          children: [...area.children, newArea],
-        })),
+  const addArea = useCallback(
+    (
+      parentId: string | null,
+      name: string,
+      color: string,
+      initial?: { icon?: string; metric?: DomainMetric }
+    ) => {
+      const newArea: Area = {
+        id: uuidv4(),
+        name,
+        color,
+        parentId,
+        children: [],
+        ...(initial?.icon !== undefined && { icon: initial.icon }),
+        ...(initial?.metric !== undefined && { metric: initial.metric }),
       };
-    });
-  }, []);
+      setState(prev => {
+        if (parentId === null) {
+          return { ...prev, areas: [...prev.areas, newArea] };
+        }
+        return {
+          ...prev,
+          areas: updateAreasRecursively(prev.areas, parentId, area => ({
+            ...area,
+            children: [...area.children, newArea],
+          })),
+        };
+      });
+    },
+    []
+  );
 
   const updateArea = useCallback((areaId: string, updates: Partial<Pick<Area, 'name' | 'color' | 'icon' | 'description' | 'aggregation'>>) => {
     setState(prev => ({
