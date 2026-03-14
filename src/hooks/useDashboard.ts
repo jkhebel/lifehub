@@ -32,16 +32,24 @@ export const useDashboard = () => {
   const stateRef = useRef<DashboardState>(state);
   const userIdRef = useRef<string | undefined>(user?.id);
   const loadedForUserIdRef = useRef<string | null>(null);
+  const stateSnapshotAtLoadStartRef = useRef<DashboardState | null>(null);
 
   // When user changes: load from remote or local
   useEffect(() => {
     let cancelled = false;
     if (user) {
       loadedForUserIdRef.current = null;
+      stateSnapshotAtLoadStartRef.current = state;
       loadRemoteState(user.id).then((remote) => {
         if (!cancelled) {
           loadedForUserIdRef.current = user.id;
-          setState(remote ?? loadDashboardState<DashboardState>(createDefault));
+          if (stateRef.current === stateSnapshotAtLoadStartRef.current) {
+            setState(remote ?? loadDashboardState<DashboardState>(createDefault));
+          } else {
+            saveRemoteState(user.id, stateRef.current).catch((err) => {
+              console.error('Failed to sync dashboard state to account', err);
+            });
+          }
         }
       });
     } else {
