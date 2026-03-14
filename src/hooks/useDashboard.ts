@@ -154,6 +154,53 @@ export const useDashboard = () => {
     }));
   }, []);
 
+  // Collect id and all descendant ids of an area (so we cannot move a node into itself or its subtree)
+  const subtreeIds = useCallback((area: Area): Set<string> => {
+    const ids = new Set<string>([area.id]);
+    area.children.forEach(c => subtreeIds(c).forEach(id => ids.add(id)));
+    return ids;
+  }, []);
+
+  // Move an area to a new parent (or root). Optional index = position among siblings.
+  const moveArea = useCallback((areaId: string, newParentId: string | null, index?: number) => {
+    setState(prev => {
+      const area = findArea(prev.areas, areaId);
+      if (!area) return prev;
+      const cannotDrop = subtreeIds(area);
+      if (newParentId && cannotDrop.has(newParentId)) return prev;
+
+      const removeFromTree = (areas: Area[]): { areas: Area[] } =>
+        ({ areas: areas.flatMap(a => (a.id === areaId ? [] : [{ ...a, children: removeFromTree(a.children).areas }])) });
+
+      const insertIntoTree = (areas: Area[], parentId: string | null, atIndex: number): Area[] => {
+        const updated = { ...area, parentId };
+        if (parentId === null) {
+          const next = [...areas];
+          next.splice(atIndex >= 0 ? Math.min(atIndex, next.length) : next.length, 0, updated);
+          return next;
+        }
+        return areas.map(a =>
+          a.id === parentId
+            ? {
+                ...a,
+                children: (() => {
+                  const next = [...a.children];
+                  const pos = atIndex >= 0 ? Math.min(atIndex, next.length) : next.length;
+                  next.splice(pos, 0, updated);
+                  return next;
+                })(),
+              }
+            : { ...a, children: insertIntoTree(a.children, parentId, atIndex) }
+        );
+      };
+
+      const { areas: without } = removeFromTree(prev.areas);
+      const atIndex = typeof index === 'number' ? index : -1;
+      const withMoved = insertIntoTree(without, newParentId, atIndex);
+      return { ...prev, areas: withMoved };
+    });
+  }, [findArea, subtreeIds]);
+
   // Add a tracker to an area
   const addTracker = useCallback((areaId: string, tracker: Omit<Tracker, 'id'>) => {
     setState(prev => ({
@@ -213,6 +260,7 @@ export const useDashboard = () => {
     addArea,
     updateArea,
     deleteArea,
+    moveArea,
     addTracker,
     updateTracker,
     deleteTracker,

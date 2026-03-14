@@ -21,10 +21,10 @@ export const TrackerCard = ({
   const [isEditing, setIsEditing] = useState(false);
 
   return (
-    <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700/50 hover:border-slate-600 transition-all">
+    <div className="bg-white/90 rounded-[10px] p-4 border-2 border-indigo-100 hover:border-indigo-200 shadow-[2px_2px_0_0_rgba(148,163,184,0.7)] transition-all">
       <div className="flex justify-between items-start mb-2">
         <div className="flex items-center gap-2 flex-wrap">
-          <h4 className="text-sm font-medium text-slate-200">{tracker.name}</h4>
+          <h4 className="text-sm font-medium text-slate-800">{tracker.name}</h4>
           {showWeight && (
             <span className="flex items-center gap-1">
               <label className="text-slate-500 text-xs">Weight:</label>
@@ -38,16 +38,26 @@ export const TrackerCard = ({
                   const v = parseFloat(e.target.value);
                   if (!isNaN(v) && v >= 0.5 && v <= 10) onUpdate({ weight: v });
                 }}
-                className="w-12 bg-slate-700 border border-slate-600 rounded px-1 py-0.5 text-xs focus:outline-none focus:border-blue-500"
+                className="w-12 bg-slate-100 border border-slate-300 rounded px-1 py-0.5 text-xs focus:outline-none focus:border-sky-500"
               />
             </span>
           )}
         </div>
         <div className="flex gap-1">
+          {tracker.type !== 'boolean' && (
+            <button
+              onClick={() => onUpdate({ value: tracker.value + 1 })}
+              className="text-xs px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 hover:bg-slate-300 transition-colors"
+              type="button"
+              title="Quickly log +1 progress"
+            >
+              +1
+            </button>
+          )}
           <button
             onClick={() => setIsEditing(!isEditing)}
-            className="text-slate-500 hover:text-slate-300 transition-colors p-1"
-            title="Edit value and target"
+            className="text-slate-500 hover:text-slate-700 transition-colors p-1"
+            title="Log or edit value and target"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -55,7 +65,7 @@ export const TrackerCard = ({
           </button>
           <button
             onClick={onDelete}
-            className="text-slate-500 hover:text-red-400 transition-colors p-1"
+            className="text-slate-500 hover:text-rose-500 transition-colors p-1"
             title="Delete tracker"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

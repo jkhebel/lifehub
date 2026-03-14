@@ -43,36 +43,39 @@ export const AddTrackerModal = ({ isOpen, onClose, onAdd }: AddTrackerModalProps
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50" onClick={onClose}>
       <div
-        className="bg-slate-800 rounded-xl p-6 w-full max-w-md border border-slate-700 shadow-xl"
+        className="bg-white rounded-[14px] p-6 w-full max-w-md border-2 border-indigo-100 shadow-[4px_4px_0_0_rgba(129,140,248,0.7)]"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-xl font-semibold mb-4">Add New Tracker</h2>
+        <h2 className="text-xl font-semibold mb-1 text-slate-900">Add New Tracker</h2>
+        <p className="text-sm text-slate-500 mb-4">
+          Track something you care about in this area&mdash;levels, hours, sessions, or a simple yes/no.
+        </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">
+            <label className="block text-sm font-medium text-slate-800 mb-1">
               Tracker Name
             </label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
+              className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-sky-500"
               placeholder="e.g., Kanji Known"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">
+            <label className="block text-sm font-medium text-slate-800 mb-1">
               Type
             </label>
             <select
               value={type}
               onChange={(e) => setType(e.target.value as TrackerType)}
-              className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
+              className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-sky-500"
             >
               {TRACKER_TYPES.map(({ value, label }) => (
                 <option key={value} value={value}>{label}</option>
@@ -82,27 +85,27 @@ export const AddTrackerModal = ({ isOpen, onClose, onAdd }: AddTrackerModalProps
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">
+              <label className="block text-sm font-medium text-slate-800 mb-1">
                 Current Value
               </label>
               <input
                 type="number"
                 value={value}
                 onChange={(e) => setValue(e.target.value)}
-                className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-sky-500"
               />
             </div>
 
             {type !== 'boolean' && (
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1">
+                <label className="block text-sm font-medium text-slate-800 mb-1">
                   Target (optional)
                 </label>
                 <input
                   type="number"
                   value={target}
                   onChange={(e) => setTarget(e.target.value)}
-                  className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-sky-500"
                   placeholder="e.g., 2136"
                 />
               </div>
@@ -111,14 +114,14 @@ export const AddTrackerModal = ({ isOpen, onClose, onAdd }: AddTrackerModalProps
 
           {(type === 'level' || type === 'progress') && (
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">
+              <label className="block text-sm font-medium text-slate-800 mb-1">
                 Maximum (optional)
               </label>
               <input
                 type="number"
                 value={max}
                 onChange={(e) => setMax(e.target.value)}
-                className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-sky-500"
                 placeholder="e.g., 60"
               />
             </div>
@@ -126,14 +129,14 @@ export const AddTrackerModal = ({ isOpen, onClose, onAdd }: AddTrackerModalProps
 
           {type !== 'percentage' && type !== 'boolean' && (
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">
+              <label className="block text-sm font-medium text-slate-800 mb-1">
                 Unit (optional)
               </label>
               <input
                 type="text"
                 value={unit}
                 onChange={(e) => setUnit(e.target.value)}
-                className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-sky-500"
                 placeholder="e.g., words, hours, lbs"
               />
             </div>
@@ -143,13 +146,13 @@ export const AddTrackerModal = ({ isOpen, onClose, onAdd }: AddTrackerModalProps
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors"
+              className="flex-1 px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg border border-slate-200 text-slate-700 transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors font-medium"
+              className="flex-1 px-4 py-2 bg-sky-500 hover:bg-sky-600 rounded-lg transition-colors font-medium text-white shadow-[2px_2px_0_0_rgba(56,189,248,0.7)]"
             >
               Add Tracker
             </button>

@@ -1,7 +1,101 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Area, AggregationMode, Tracker } from '../types';
 import { TrackerCard } from './TrackerCard';
 import { AddTrackerModal } from './AddTrackerModal';
+
+interface EditAreaModalProps {
+  areaName: string;
+  areaIcon: string;
+  onClose: () => void;
+  onSave: (name: string, icon: string) => void;
+  onDelete?: () => void;
+}
+
+function EditAreaModal({
+  areaName,
+  areaIcon,
+  onClose,
+  onSave,
+  onDelete,
+}: EditAreaModalProps) {
+  const [name, setName] = useState(areaName);
+  const [icon, setIcon] = useState(areaIcon);
+  useEffect(() => {
+    setName(areaName);
+    setIcon(areaIcon);
+  }, [areaName, areaIcon]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Edit domain"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-xl p-5 w-full max-w-sm border-2 border-slate-200 shadow-[4px_4px_0_rgba(148,163,184,0.4)]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 className="text-lg font-semibold text-slate-900 mb-3">Edit domain</h2>
+        <p className="text-sm text-slate-500 mb-3">
+          Change the name and emoji for this domain. Changes apply everywhere.
+        </p>
+        <div className="space-y-3">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Name</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-sky-500"
+              placeholder="Domain name"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Emoji</label>
+            <input
+              type="text"
+              value={icon}
+              onChange={(e) => setIcon(e.target.value)}
+              maxLength={4}
+              className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-sky-500"
+              placeholder="e.g. 🏋️"
+            />
+          </div>
+        </div>
+        <div className="flex flex-col gap-2 mt-4">
+          <div className="flex gap-2 justify-end">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-3 py-1.5 text-sm rounded-lg text-slate-600 hover:bg-slate-100 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => onSave(name, icon)}
+              disabled={!name.trim()}
+              className="px-3 py-1.5 text-sm rounded-lg bg-sky-500 disabled:bg-slate-300 disabled:text-slate-500 hover:bg-sky-600 text-white transition-colors"
+            >
+              Save
+            </button>
+          </div>
+          {onDelete && (
+            <button
+              type="button"
+              onClick={onDelete}
+              className="mt-2 w-full py-1.5 text-sm rounded-lg text-rose-600 hover:bg-rose-50 border border-rose-200 transition-colors"
+            >
+              Delete this area
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 interface TrackerPanelProps {
   area: Area | null;
@@ -10,6 +104,8 @@ interface TrackerPanelProps {
   onDeleteTracker: (areaId: string, trackerId: string) => void;
   onAddTracker: (areaId: string, tracker: Omit<Tracker, 'id'>) => void;
   calculateProgress: (area: Area) => number;
+  /** Called when user requests to delete this area (opens confirmation). */
+  onDeleteAreaRequest?: (areaId: string) => void;
 }
 
 const AGGREGATION_OPTIONS: { value: AggregationMode; label: string }[] = [
@@ -25,24 +121,26 @@ export const TrackerPanel = ({
   onDeleteTracker,
   onAddTracker,
   calculateProgress,
+  onDeleteAreaRequest,
 }: TrackerPanelProps) => {
   const [isAddingTracker, setIsAddingTracker] = useState(false);
   const [isEditingGoal, setIsEditingGoal] = useState(false);
   const [goalProgressInput, setGoalProgressInput] = useState('');
   const [goalDateInput, setGoalDateInput] = useState('');
+  const [showEditModal, setShowEditModal] = useState(false);
 
   if (!area) {
     return (
-      <div className="bg-slate-800/30 rounded-xl p-6 border border-slate-700/50">
-        <h3 className="text-lg font-semibold text-slate-300 mb-4">Welcome to Life Dashboard</h3>
-        <p className="text-slate-400 text-sm leading-relaxed">
-          Click on an area in the bullseye diagram to view and manage its trackers.
-          Each area can have multiple metrics that contribute to your overall progress.
+      <div className="bg-white/95 rounded-[10px] p-6 border-2 border-slate-300 border-t-slate-200 border-l-slate-200 card-paper">
+        <h3 className="text-lg font-semibold text-slate-800 mb-4">Welcome to Life Dashboard</h3>
+        <p className="text-slate-600 text-sm leading-relaxed">
+          Select a domain in the list (or click one on the radar) to view and manage its trackers.
+          Each domain can have multiple metrics that contribute to your overall progress.
         </p>
-        <div className="mt-4 p-4 bg-slate-700/30 rounded-lg">
+        <div className="mt-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
           <p className="text-slate-500 text-xs">
             Tip: Progress from trackers and sub-areas automatically aggregates
-            into the parent area's progress ring.
+            into the parent area on the radar.
           </p>
         </div>
       </div>
@@ -52,25 +150,42 @@ export const TrackerPanel = ({
   const progress = calculateProgress(area);
 
   return (
-    <div className="bg-slate-800/30 rounded-xl border border-slate-700/50 overflow-hidden">
+    <div className="bg-white/95 rounded-[10px] border-2 border-slate-300 border-t-slate-200 border-l-slate-200 overflow-hidden card-paper">
       {/* Area Header */}
       <div
-        className="p-4 border-b border-slate-700/50"
-        style={{ backgroundColor: `${area.color}15` }}
+        className="p-4 border-b border-slate-200"
+        style={{ backgroundColor: `${area.color}12` }}
       >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {area.icon && <span className="text-2xl">{area.icon}</span>}
-            <div>
-              <h3 className="text-lg font-semibold" style={{ color: area.color }}>
-                {area.name}
-              </h3>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            {area.icon && (
+              <span className="text-2xl shrink-0" aria-hidden>
+                {area.icon}
+              </span>
+            )}
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-lg font-semibold text-slate-900" style={{ color: area.color }}>
+                  {area.name}
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setShowEditModal(true)}
+                  className="shrink-0 p-1 text-slate-500 hover:text-sky-600 hover:bg-sky-50 rounded-[4px] transition-colors"
+                  title="Edit domain name and emoji"
+                  aria-label="Edit domain"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                  </svg>
+                </button>
+              </div>
               {area.description && (
-                <p className="text-slate-400 text-sm">{area.description}</p>
+                <p className="text-slate-500 text-sm">{area.description}</p>
               )}
             </div>
           </div>
-          <div className="text-right">
+          <div className="text-right shrink-0">
             <div className="text-2xl font-bold" style={{ color: area.color }}>
               {Math.round(progress)}%
             </div>
@@ -79,7 +194,7 @@ export const TrackerPanel = ({
         </div>
 
         {/* Progress bar */}
-        <div className="mt-3 h-2 bg-slate-700 rounded-full overflow-hidden">
+        <div className="mt-3 h-2 bg-slate-200 rounded-full overflow-hidden">
           <div
             className="h-full rounded-full transition-all duration-500"
             style={{
@@ -91,10 +206,10 @@ export const TrackerPanel = ({
 
         {/* Goal: Current vs Target and On track */}
         {(area.targetProgress != null || isEditingGoal) && (
-          <div className="mt-3 pt-3 border-t border-slate-700/50">
+          <div className="mt-3 pt-3 border-t border-slate-200">
             {isEditingGoal ? (
               <div className="flex flex-wrap items-center gap-2">
-                <label className="text-slate-400 text-sm">Goal:</label>
+                <label className="text-slate-600 text-sm">Goal:</label>
                 <input
                   type="number"
                   min={0}
@@ -102,15 +217,15 @@ export const TrackerPanel = ({
                   value={goalProgressInput}
                   onChange={(e) => setGoalProgressInput(e.target.value)}
                   placeholder="%"
-                  className="w-16 bg-slate-700 border border-slate-600 rounded px-2 py-1 text-sm focus:outline-none focus:border-blue-500"
+                  className="w-16 bg-white border border-slate-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-sky-500"
                 />
-                <span className="text-slate-400 text-sm">%</span>
-                <label className="text-slate-400 text-sm ml-2">By:</label>
+                <span className="text-slate-600 text-sm">%</span>
+                <label className="text-slate-600 text-sm ml-2">By:</label>
                 <input
                   type="date"
                   value={goalDateInput}
                   onChange={(e) => setGoalDateInput(e.target.value)}
-                  className="bg-slate-700 border border-slate-600 rounded px-2 py-1 text-sm focus:outline-none focus:border-blue-500"
+                  className="bg-white border border-slate-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-sky-500"
                 />
                 <button
                   onClick={() => {
@@ -123,7 +238,7 @@ export const TrackerPanel = ({
                     }
                     setIsEditingGoal(false);
                   }}
-                  className="px-2 py-1 bg-blue-600 hover:bg-blue-700 rounded text-sm"
+                  className="px-2 py-1 bg-sky-500 hover:bg-sky-600 rounded text-sm text-white"
                 >
                   Save
                 </button>
@@ -133,7 +248,7 @@ export const TrackerPanel = ({
                     setGoalProgressInput(String(area.targetProgress ?? ''));
                     setGoalDateInput(area.targetDate ?? '');
                   }}
-                  className="px-2 py-1 text-slate-400 hover:text-white text-sm"
+                  className="px-2 py-1 text-slate-500 hover:text-slate-700 text-sm"
                 >
                   Cancel
                 </button>
@@ -141,7 +256,7 @@ export const TrackerPanel = ({
             ) : (
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <div className="flex items-center gap-2">
-                  <span className="text-slate-400 text-sm">
+                  <span className="text-slate-600 text-sm">
                     Current {Math.round(progress)}%{area.targetProgress != null ? ` / Goal ${area.targetProgress}%` : ''}
                   </span>
                   {area.targetDate && (
@@ -151,8 +266,8 @@ export const TrackerPanel = ({
                     <span
                       className={`text-xs font-medium px-1.5 py-0.5 rounded ${
                         progress >= area.targetProgress
-                          ? 'text-green-400 bg-green-400/20'
-                          : 'text-amber-400 bg-amber-400/20'
+                          ? 'text-emerald-700 bg-emerald-100'
+                          : 'text-amber-700 bg-amber-100'
                       }`}
                     >
                       {progress >= area.targetProgress ? 'On track' : 'Behind'}
@@ -165,7 +280,7 @@ export const TrackerPanel = ({
                     setGoalDateInput(area.targetDate ?? '');
                     setIsEditingGoal(true);
                   }}
-                  className="text-slate-500 hover:text-slate-300 p-1"
+                  className="text-slate-500 hover:text-slate-700 p-1"
                   title="Edit goal"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -177,14 +292,14 @@ export const TrackerPanel = ({
           </div>
         )}
         {area.targetProgress == null && !isEditingGoal && (
-          <div className="mt-3 pt-3 border-t border-slate-700/50">
+          <div className="mt-3 pt-3 border-t border-slate-200">
             <button
               onClick={() => {
                 setGoalProgressInput('');
                 setGoalDateInput('');
                 setIsEditingGoal(true);
               }}
-              className="text-slate-500 hover:text-slate-300 text-sm"
+              className="text-slate-500 hover:text-sky-600 text-sm"
             >
               + Set goal
             </button>
@@ -192,17 +307,17 @@ export const TrackerPanel = ({
         )}
 
         {/* Aggregation mode */}
-        <div className="mt-3 pt-3 border-t border-slate-700/50">
-          <span className="text-slate-400 text-sm mr-2">Progress:</span>
-          <div className="inline-flex rounded-lg border border-slate-600 overflow-hidden">
+        <div className="mt-3 pt-3 border-t border-slate-200">
+          <span className="text-slate-600 text-sm mr-2">Progress:</span>
+          <div className="inline-flex rounded-lg border border-slate-300 overflow-hidden">
             {AGGREGATION_OPTIONS.map(({ value, label }) => (
               <button
                 key={value}
                 onClick={() => onUpdateArea(area.id, { aggregation: value })}
                 className={`px-3 py-1 text-sm transition-colors ${
                   (area.aggregation ?? 'average') === value
-                    ? 'bg-slate-600 text-white'
-                    : 'bg-slate-700/50 text-slate-400 hover:text-slate-200'
+                    ? 'bg-sky-500 text-white'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
               >
                 {label}
@@ -215,12 +330,12 @@ export const TrackerPanel = ({
       {/* Trackers */}
       <div className="p-4">
         <div className="flex items-center justify-between mb-4">
-          <h4 className="text-sm font-medium text-slate-400">
+          <h4 className="text-sm font-medium text-slate-600">
             Trackers ({area.trackers.length})
           </h4>
           <button
             onClick={() => setIsAddingTracker(true)}
-            className="flex items-center gap-1 text-sm text-blue-400 hover:text-blue-300 transition-colors"
+            className="flex items-center gap-1 text-sm text-sky-600 hover:text-sky-700 transition-colors"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -234,7 +349,7 @@ export const TrackerPanel = ({
             <p className="mb-2">No trackers yet</p>
             <button
               onClick={() => setIsAddingTracker(true)}
-              className="text-blue-400 hover:text-blue-300 text-sm"
+              className="text-sky-600 hover:text-sky-700 text-sm"
             >
               Add your first tracker
             </button>
@@ -256,7 +371,7 @@ export const TrackerPanel = ({
 
         {/* Sub-areas info */}
         {area.children.length > 0 && (
-          <div className="mt-4 pt-4 border-t border-slate-700/50">
+          <div className="mt-4 pt-4 border-t border-slate-200">
             <p className="text-slate-500 text-sm">
               This area has {area.children.length} sub-area{area.children.length !== 1 ? 's' : ''}
               that also contribute to progress.
@@ -270,6 +385,26 @@ export const TrackerPanel = ({
         onClose={() => setIsAddingTracker(false)}
         onAdd={(tracker) => onAddTracker(area.id, tracker)}
       />
+
+      {showEditModal && (
+        <EditAreaModal
+          areaName={area.name}
+          areaIcon={area.icon ?? ''}
+          onClose={() => setShowEditModal(false)}
+          onSave={(name, icon) => {
+            onUpdateArea(area.id, { name: name.trim(), icon: icon.trim().slice(0, 4) || undefined });
+            setShowEditModal(false);
+          }}
+          onDelete={
+            onDeleteAreaRequest
+              ? () => {
+                  onDeleteAreaRequest(area.id);
+                  setShowEditModal(false);
+                }
+              : undefined
+          }
+        />
+      )}
     </div>
   );
 };
