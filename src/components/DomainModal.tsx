@@ -402,6 +402,7 @@ export function DomainModal({
           setUnit(area.metric.unit ?? '');
         }
         if (area.metric.type === 'stages') {
+          initialStagesMetricRef.current = area.metric;
           setStageNames(area.metric.stages.length ? [...area.metric.stages] : ['']);
           setStageBoundsText(area.metric.stageBounds?.join(', ') ?? '');
           setCurrentValue(area.metric.currentValue != null ? String(area.metric.currentValue) : '');
