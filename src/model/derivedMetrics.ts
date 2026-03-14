@@ -1,4 +1,4 @@
-import type { Area, LevelsMetric, StagesMetric } from '../types';
+import type { Area, StagesMetric } from '../types';
 
 /** Numeric value from an area's metric for use in levels bounds (e.g. progress.current, stages.currentValue). */
 export function getNumericValueFromArea(area: Area): number {

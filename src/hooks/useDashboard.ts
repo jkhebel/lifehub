@@ -127,7 +127,7 @@ export const useDashboard = () => {
     []
   );
 
-  const updateArea = useCallback((areaId: string, updates: Partial<Pick<Area, 'name' | 'color' | 'icon' | 'description' | 'aggregation'>>) => {
+  const updateArea = useCallback((areaId: string, updates: Partial<Pick<Area, 'name' | 'color' | 'icon' | 'description' | 'aggregation' | 'statName'>>) => {
     setState(prev => ({
       ...prev,
       areas: updateAreasRecursively(prev.areas, areaId, area => ({

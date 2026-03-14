@@ -15,8 +15,8 @@ export interface DomainModalProps {
   area?: Area | null;
   /** Add mode: create domain with optional icon and metric */
   onAdd?: (name: string, color: string, initial?: { icon?: string; metric?: DomainMetric }) => void;
-  /** Edit mode: update name/icon */
-  onUpdateArea?: (areaId: string, updates: Partial<Pick<Area, 'name' | 'icon' | 'aggregation'>>) => void;
+  /** Edit mode: update name/icon/statName/aggregation */
+  onUpdateArea?: (areaId: string, updates: Partial<Pick<Area, 'name' | 'icon' | 'aggregation' | 'statName'>>) => void;
   /** Edit mode: set or clear metric */
   onUpdateDomainMetric?: (domainId: string, metric: DomainMetric | null) => void;
   /** Edit mode: request delete (opens confirmation dialog) */
@@ -41,9 +41,17 @@ function MetricFields({
   setLevelNames,
   levelParams,
   setLevelParams,
+  stageNames,
+  setStageNames,
+  stageBoundsText,
+  setStageBoundsText,
+  currentValueText,
+  setCurrentValueText,
+  stagesCurrentIndex,
+  setStagesCurrentIndex,
   children: childAreas,
 }: {
-  kind: 'binary' | 'progress' | 'levels';
+  kind: 'binary' | 'progress' | 'stages' | 'levels';
   binaryValue: 0 | 1;
   setBinaryValue: (v: 0 | 1) => void;
   current: number;
@@ -56,6 +64,14 @@ function MetricFields({
   setLevelNames: (v: string[] | ((prev: string[]) => string[])) => void;
   levelParams: LevelsParameter[];
   setLevelParams: (v: LevelsParameter[] | ((prev: LevelsParameter[]) => LevelsParameter[])) => void;
+  stageNames: string[];
+  setStageNames: (v: string[] | ((prev: string[]) => string[])) => void;
+  stageBoundsText: string;
+  setStageBoundsText: (v: string) => void;
+  currentValueText: string;
+  setCurrentValueText: (v: string) => void;
+  stagesCurrentIndex: number;
+  setStagesCurrentIndex: (v: number) => void;
   children: Area[];
 }) {
   return (
@@ -107,6 +123,89 @@ function MetricFields({
           </div>
         </>
       )}
+      {kind === 'stages' && (
+        <>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Stage names</label>
+            <p className="text-xs text-slate-500 mb-2">Ordered list (e.g. A1, A2, B1, B2). Progress by current stage or by value below.</p>
+            <div className="space-y-2">
+              {stageNames.map((stageName, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <span className="text-slate-500 text-sm w-12">{i + 1}:</span>
+                  <input
+                    type="text"
+                    value={stageName}
+                    onChange={e => {
+                      const next = [...stageNames];
+                      next[i] = e.target.value;
+                      setStageNames(next);
+                    }}
+                    placeholder="e.g. A1"
+                    className="flex-1 bg-slate-50 border border-slate-300 rounded-lg px-3 py-1.5 text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setStageNames((prev) => prev.filter((_, j) => j !== i))}
+                    className="p-1 text-slate-400 hover:text-rose-600 rounded"
+                    aria-label={`Remove stage ${i + 1}`}
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => setStageNames((prev) => [...prev, ''])}
+                className="text-sm text-sky-600 hover:text-sky-700 font-medium"
+              >
+                + Add stage
+              </button>
+            </div>
+          </div>
+          {stageNames.filter(Boolean).length > 0 && (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Current stage (when not using value)</label>
+                <select
+                  value={Math.min(stagesCurrentIndex, Math.max(0, stageNames.map((s) => s.trim()).filter(Boolean).length - 1))}
+                  onChange={e => setStagesCurrentIndex(Number(e.target.value))}
+                  className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm"
+                >
+                  {stageNames
+                    .map((s) => s.trim())
+                    .filter(Boolean)
+                    .map((label, i) => (
+                      <option key={i} value={i}>{label || `Stage ${i + 1}`}</option>
+                    ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Numeric bounds (optional)</label>
+                <p className="text-xs text-slate-500 mb-2">Comma-separated; length must be stages + 1 (e.g. 0, 1000, 2000, 4000, 6000).</p>
+                <input
+                  type="text"
+                  value={stageBoundsText}
+                  onChange={e => setStageBoundsText(e.target.value)}
+                  placeholder="0, 1000, 2000, 4000, 6000"
+                  className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Current value (optional)</label>
+                <p className="text-xs text-slate-500 mb-2">When set with bounds, progress is derived from value within the current tier.</p>
+                <input
+                  type="number"
+                  min={0}
+                  value={currentValueText}
+                  onChange={e => setCurrentValueText(e.target.value)}
+                  placeholder="e.g. 3500"
+                  className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm"
+                />
+              </div>
+            </>
+          )}
+        </>
+      )}
       {kind === 'levels' && (
         <>
           <div>
@@ -156,7 +255,6 @@ function MetricFields({
                 <>
                   <div className="space-y-3">
                     {levelParams.map((param, pi) => {
-                      const child = childAreas.find((c) => c.id === param.childId);
                       const boundsLen = levelNames.length + 1;
                       const bounds = param.bounds.length === boundsLen ? param.bounds : Array.from({ length: boundsLen }, () => 0);
                       return (
@@ -252,18 +350,19 @@ export function DomainModal({
   const isEdit = mode === 'edit';
 
   const [name, setName] = useState('');
+  const [statName, setStatName] = useState('');
   const [icon, setIcon] = useState('');
   const [color, setColor] = useState(DEFAULT_COLORS[0]);
   const [hasMetric, setHasMetric] = useState(false);
-  const [kind, setKind] = useState<'binary' | 'progress' | 'stages'>('binary');
+  const [kind, setKind] = useState<'binary' | 'progress' | 'stages' | 'levels'>('binary');
   const [binaryValue, setBinaryValue] = useState<0 | 1>(0);
   const [current, setCurrent] = useState(0);
   const [max, setMax] = useState(10);
   const [unit, setUnit] = useState('');
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [stagesText, setStagesText] = useState('');
   const [stageBoundsText, setStageBoundsText] = useState('');
   const [currentValue, setCurrentValue] = useState('');
+  const [stageNames, setStageNames] = useState<string[]>([]);
+  const [stagesCurrentIndex, setStagesCurrentIndex] = useState(0);
   const [levelNames, setLevelNames] = useState<string[]>([]);
   const [levelParams, setLevelParams] = useState<LevelsParameter[]>([]);
   const [aggregation, setAggregation] = useState<AggregationMode>('average');
@@ -288,12 +387,13 @@ export function DomainModal({
     if (!isOpen) return;
     if (isEdit && area) {
       setName(area.name);
+      setStatName(area.statName ?? '');
       setIcon(area.icon ?? '');
       setHasMetric(area.metric != null);
       setAggregation(area.aggregation ?? 'average');
       if (area.metric) {
         initialStagesMetricRef.current = null;
-        const metricType = area.metric.type === 'levels' || area.metric.type === 'stages' ? 'levels' : area.metric.type;
+        const metricType = area.metric.type === 'levels' ? 'levels' : area.metric.type === 'stages' ? 'stages' : area.metric.type;
         setKind(metricType);
         if (area.metric.type === 'binary') setBinaryValue(area.metric.value);
         if (area.metric.type === 'progress') {
@@ -302,18 +402,22 @@ export function DomainModal({
           setUnit(area.metric.unit ?? '');
         }
         if (area.metric.type === 'stages') {
-          setLevelNames(area.metric.stages);
+          setStageNames(area.metric.stages.length ? [...area.metric.stages] : ['']);
+          setStageBoundsText(area.metric.stageBounds?.join(', ') ?? '');
+          setCurrentValue(area.metric.currentValue != null ? String(area.metric.currentValue) : '');
+          setStagesCurrentIndex(
+            Math.min(area.metric.currentIndex, Math.max(0, area.metric.stages.length - 1))
+          );
+          setLevelNames([]);
           setLevelParams([]);
-          initialStagesMetricRef.current = area.metric;
-          setCurrentIndex(0);
-          setStagesText('');
-          setStageBoundsText('');
-          setCurrentValue('');
         }
         if (area.metric.type === 'levels') {
           setLevelNames(area.metric.levels);
           setLevelParams(area.metric.parameters.map((p) => ({ childId: p.childId, bounds: [...p.bounds] })));
-          initialStagesMetricRef.current = null;
+          setStageNames([]);
+          setStageBoundsText('');
+          setCurrentValue('');
+          setStagesCurrentIndex(0);
         }
       } else {
         setKind('binary');
@@ -321,14 +425,17 @@ export function DomainModal({
         setCurrent(0);
         setMax(10);
         setUnit('');
-        setCurrentIndex(0);
-        setStagesText('');
+        setStageNames([]);
+        setStageBoundsText('');
+        setCurrentValue('');
+        setStagesCurrentIndex(0);
         setLevelNames([]);
         setLevelParams([]);
         initialStagesMetricRef.current = null;
       }
     } else {
       setName('');
+      setStatName('');
       setIcon('');
       setColor(DEFAULT_COLORS[0]);
       setHasMetric(false);
@@ -337,10 +444,10 @@ export function DomainModal({
       setCurrent(0);
       setMax(10);
       setUnit('');
-      setCurrentIndex(0);
-      setStagesText('');
       setStageBoundsText('');
       setCurrentValue('');
+      setStageNames([]);
+      setStagesCurrentIndex(0);
       setLevelNames([]);
       setLevelParams([]);
       initialStagesMetricRef.current = null;
@@ -351,6 +458,39 @@ export function DomainModal({
     if (!hasMetric) return null;
     if (kind === 'binary') return { type: 'binary', value: binaryValue };
     if (kind === 'progress') return { type: 'progress', current: Number(current) || 0, max: Number(max) || 1, unit: unit || undefined };
+    if (kind === 'stages') {
+      const stages = stageNames.map((s) => s.trim()).filter(Boolean);
+      if (stages.length === 0) return null;
+      const boundsParsed = stageBoundsText
+        .split(',')
+        .map((s) => Number(s.trim()))
+        .filter((n) => !Number.isNaN(n));
+      const haveBounds = boundsParsed.length === stages.length + 1;
+      const valueNum = currentValue.trim() === '' ? undefined : Number(currentValue);
+      const haveValue = valueNum !== undefined && !Number.isNaN(valueNum);
+      let currentIndex = stagesCurrentIndex;
+      if (haveBounds && haveValue && valueNum !== undefined) {
+        const lastBound = boundsParsed[boundsParsed.length - 1]!;
+        if (lastBound > 0 && valueNum >= lastBound) {
+          currentIndex = stages.length - 1;
+        } else {
+          for (let i = 0; i < boundsParsed.length - 1; i++) {
+            if (valueNum >= boundsParsed[i]! && valueNum < boundsParsed[i + 1]!) {
+              currentIndex = i;
+              break;
+            }
+          }
+        }
+      }
+      const metric: StagesMetric = {
+        type: 'stages',
+        currentIndex,
+        stages,
+        ...(haveBounds && { stageBounds: boundsParsed }),
+        ...(haveValue && valueNum !== undefined && { currentValue: valueNum }),
+      };
+      return metric;
+    }
     if (kind === 'levels') {
       const levels = levelNames.map((n) => n.trim()).filter(Boolean);
       if (levels.length === 0) return null;
@@ -376,7 +516,7 @@ export function DomainModal({
   const handleSubmitEdit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!area || !onUpdateArea || !onUpdateDomainMetric) return;
-    onUpdateArea(area.id, { name: name.trim(), icon: icon || undefined, aggregation });
+    onUpdateArea(area.id, { name: name.trim(), icon: icon || undefined, aggregation, statName: statName.trim() || undefined });
     const metric = buildMetric();
     onUpdateDomainMetric(area.id, metric);
     onClose();
@@ -422,6 +562,19 @@ export function DomainModal({
               autoFocus
             />
           </div>
+
+          {isEdit && (
+            <div>
+              <label className="block text-sm font-medium text-slate-800 mb-1">Stat name (character card, optional)</label>
+              <input
+                type="text"
+                value={statName}
+                onChange={e => setStatName(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2"
+                placeholder="e.g. HP, Charm — leave empty to use name"
+              />
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-slate-800 mb-1">Emoji (optional)</label>
@@ -479,16 +632,19 @@ export function DomainModal({
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Type</label>
                 <div className="flex gap-2 flex-wrap">
-                  {(['binary', 'progress', 'levels'] as const).map(t => (
+                  {(['binary', 'progress', 'stages', 'levels'] as const).map(t => (
                     <button
                       key={t}
                       type="button"
-                      onClick={() => setKind(t)}
+                      onClick={() => {
+                        setKind(t);
+                        if (t === 'stages' && stageNames.length === 0) setStageNames(['']);
+                      }}
                       className={`px-3 py-1.5 text-sm rounded-lg border ${
                         kind === t ? 'bg-sky-500 text-white border-sky-500' : 'bg-slate-100 border-slate-300'
                       }`}
                     >
-                      {t === 'binary' ? 'Done / Not done' : t === 'progress' ? 'Progress' : 'Levels'}
+                      {t === 'binary' ? 'Done / Not done' : t === 'progress' ? 'Progress' : t === 'stages' ? 'Stages' : 'Levels'}
                     </button>
                   ))}
                 </div>
@@ -507,6 +663,14 @@ export function DomainModal({
                 setLevelNames={setLevelNames}
                 levelParams={levelParams}
                 setLevelParams={setLevelParams}
+                stageNames={stageNames}
+                setStageNames={setStageNames}
+                stageBoundsText={stageBoundsText}
+                setStageBoundsText={setStageBoundsText}
+                currentValueText={currentValue}
+                setCurrentValueText={setCurrentValue}
+                stagesCurrentIndex={stagesCurrentIndex}
+                setStagesCurrentIndex={setStagesCurrentIndex}
                 children={area?.children ?? []}
               />
             </div>

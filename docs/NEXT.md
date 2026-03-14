@@ -11,23 +11,22 @@ This doc orients new contributors and agents on the current phase and the immedi
 
 ## Implemented (Phase 1 + Phase 2 foundation)
 
-- **Unified domain metrics:** Single tree of areas with optional metric per node (binary, progress, stages). Stages support optional `stageBounds` and `currentValue` for value-based tiers (e.g. vocabulary → A1/A2/B1/B2). Optional `statName` per area (e.g. HP, Charm). Progress derived from metric or by aggregating children (average/minimum).
-- **Levels metric:** **Character level** is derived from `gamification.totalXp` (sublinear curve); shown on the character card with an XP bar. **Per-domain “level”** in the radar is expressed as progress to the next tier when using stages (e.g. “To next level” view with tier labels like A1, A2, B1). Levels are computed from the model, not stored in the JSON tree.
+- **Unified domain metrics:** Single tree of areas with optional metric per node (binary, progress, stages, levels). Stages support optional `stageBounds` and `currentValue` for value-based tiers (e.g. vocabulary → A1/A2/B1/B2). Optional `statName` per area (e.g. HP, Charm). Progress derived from metric or by aggregating children (average/minimum).
+- **Levels metric:** **Character level** is derived from `gamification.totalXp` (sublinear curve); shown on the character card as title “Level N” and an XP bar. **Per-domain “level”** in the radar is expressed as progress to the next tier when using stages (e.g. “To next level” view with tier labels like A1, A2, B1). Levels are computed from the model, not stored in the JSON tree.
 - **Radar:** View mode **To next level** (relative: progress to next tier per axis, with tier labels) and **Absolute** (objective). Optional multi-series in objective mode (multiple polygons + legend). Default: relative.
-- **Gamification:** Persisted `gamification` (totalXp, completionLog). Binary domain set to done adds completion entry and awards XP. Character card shows level, XP bar, and stat block (statName or name + progress).
+- **Gamification:** Persisted `gamification` (totalXp, completionLog). Binary domain set to done adds completion entry and awards XP. Character card shows title (Level N), XP bar, stat block (statName or name + progress), and **badges/titles (minimal)**: badges derived from completion count (First steps, Getting started, Building momentum); title = Level N.
 - **JSON view:** **Data (JSON)** modal (`DataJsonView`) lets users view and edit the full dashboard state as JSON (areas, gamification, currentAreaId, breadcrumbs, pinnedAreaIds). Areas are validated on Apply; invalid data shows an error. Accessible from the UI for power users and debugging.
-- **UI:** Single grid (radar + character card). Domain tree, **DomainModal** (add/edit: name, emoji, color, metric, pin, delete), drag-and-drop, **Pinned** section. Pixel/TCG direction: Silkscreen font for headings/radar labels; see `docs/DESIGN.md`.
+- **UI:** Single grid (radar + character card). Domain tree, **DomainModal** (add/edit: name, stat name, emoji, color, metric including **Stages** with stageBounds/currentValue, pin, delete), drag-and-drop, **Pinned** section. Pixel/TCG direction: Silkscreen font for headings/radar labels; see `docs/DESIGN.md`.
 
 ## Immediate focus
 
-**Goal:** Phase 2 polish and follow-up from the roadmap (e.g. DomainModal support for editing statName and stages with stageBounds/currentValue; badges/titles UI).
+**Goal:** Phase 2 follow-up (accessibility, empty states, onboarding) and future gamification tuning.
 
 **Lead (with Test/Docs/UI) should:**
 
 - Keep docs and tests aligned with the current schema and behavior.
-- Add DomainModal fields for statName and for stages (stageBounds, currentValue) when desired.
 
-**Docs** should keep `docs/` accurate; **Architect + Game Design** define concrete rules for levels/badges per PROJECT.md.
+**Docs** should keep `docs/` accurate; **Architect + Game Design** can refine badge/title rules and thresholds (currently minimal: completion-count badges + level title) per PROJECT.md.
 
 ## After Phase 2
 
