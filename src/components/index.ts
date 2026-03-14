@@ -4,3 +4,4 @@ export { DomainTree } from './DomainTree';
 export { CharacterCard } from './CharacterCard';
 export { DomainModal } from './DomainModal';
 export { DataJsonView } from './DataJsonView';
+export { AuthBar } from './AuthBar';

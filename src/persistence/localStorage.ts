@@ -4,8 +4,8 @@ import { getDefaultAreas } from '../config/loadConfig';
 
 const STORAGE_KEY = 'life-dashboard-data';
 
-/** Normalize loaded state: areas, currentAreaId, breadcrumbs, pinnedAreaIds, optional gamification. */
-function normalizeLoadedState(parsed: Partial<DashboardState>): DashboardState {
+/** Normalize loaded state: areas, currentAreaId, breadcrumbs, pinnedAreaIds, optional gamification. Shared by local and remote loaders. */
+export function normalizeLoadedState(parsed: Partial<DashboardState>): DashboardState {
   const gamification = parsed.gamification;
   const normalizedGamification =
     gamification &&

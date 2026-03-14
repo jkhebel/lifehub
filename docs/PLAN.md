@@ -24,7 +24,7 @@ We avoid over-engineering complex game systems before the basic model, visualiza
 | --- | --- | --- |
 | **Phase 1** | MVP: JSON stat-tree, bullseye + card views, local persistence | Done |
 | **Phase 2** | Gamification: levels, badges, milestones/tasks, XP, cosmetics, radar toggle | In progress |
-| **Phase 3** | Deployment (e.g. Fly.io), authentication, per-user persistence | Placeholder |
+| **Phase 3** | Deployment (Fly.io), authentication (Supabase), per-user persistence | In progress |
 | **Phase 4+** | Integrations: templates, import/export, optional sync (e.g. Todoist/Google Tasks) | Placeholder |
 
 ---

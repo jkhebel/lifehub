@@ -1,0 +1,18 @@
+# Fly.io app config for Life Dashboard (static Vite build).
+# Deploy: fly deploy
+# Set secrets for production: fly secrets set VITE_SUPABASE_URL=... VITE_SUPABASE_ANON_KEY=...
+
+app = "life-dashboard"
+
+[http_service]
+  internal_port = 80
+  force_https = true
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ["app"]
+
+[[vm]]
+  memory = "256mb"
+  cpu_kind = "shared"
+  cpus = 1

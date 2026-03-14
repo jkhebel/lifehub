@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import type { Area, DashboardState, DomainMetric } from '../types';
 import { XP_PER_BINARY_COMPLETE } from '../model/gamification';
 import { getDefaultAreas } from '../config/loadConfig';
@@ -12,21 +12,60 @@ import {
   loadDashboardState,
   persistDashboardState,
 } from '../persistence/localStorage';
+import { loadRemoteState, saveRemoteState } from '../persistence/supabaseStorage';
+import { useAuth } from '../auth/AuthContext';
+
+const createDefault = (): DashboardState => ({
+  areas: getDefaultAreas(),
+  currentAreaId: null,
+  breadcrumbs: [],
+  pinnedAreaIds: [],
+  gamification: { totalXp: 0, completionLog: [] },
+});
 
 export const useDashboard = () => {
+  const { user } = useAuth();
   const [state, setState] = useState<DashboardState>(() =>
-    loadDashboardState<DashboardState>(() => ({
-      areas: getDefaultAreas(),
-      currentAreaId: null,
-      breadcrumbs: [],
-      pinnedAreaIds: [],
-      gamification: { totalXp: 0, completionLog: [] },
-    }))
+    loadDashboardState<DashboardState>(createDefault)
   );
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // When user changes: load from remote or local
   useEffect(() => {
-    persistDashboardState(state);
-  }, [state]);
+    let cancelled = false;
+    if (user) {
+      loadRemoteState(user.id).then((remote) => {
+        if (!cancelled && remote) setState(remote);
+      });
+    } else {
+      setState(loadDashboardState<DashboardState>(createDefault));
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
+
+  // Persist: local when no user, remote (debounced) when user
+  useEffect(() => {
+    if (!user) {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = null;
+      }
+      persistDashboardState(state);
+      return;
+    }
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(() => {
+      saveTimeoutRef.current = null;
+      saveRemoteState(user.id, state).catch(() => {
+        // Ignore network/DB errors; state remains in memory
+      });
+    }, 500);
+    return () => {
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    };
+  }, [state, user]);
 
   const findArea = useCallback((areas: Area[], id: string): Area | null => {
     for (const area of areas) {

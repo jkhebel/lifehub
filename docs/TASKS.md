@@ -394,6 +394,54 @@ Define and implement an equation for computing a parent domain’s progress % fr
 
 ---
 
+## T19 — Deploy static app to Fly.io (Phase 3)
+
+**Title:** Deploy the Vite static build to Fly.io.
+
+**Scope:** Dockerfile (multi-stage: node build, nginx serve with SPA fallback), fly.toml, and a “Deploy to Fly.io” section in docs/DEV.md. No secrets in repo; production env via `fly secrets set`.
+
+**Acceptance criteria:** `fly deploy` succeeds; app loads at Fly URL; SPA routing works (refresh on a path returns 200).
+
+**Files touched:** Dockerfile, fly.toml, docs/DEV.md.
+
+---
+
+## T20 — Env-based config and optional Supabase client (Phase 3)
+
+**Title:** Vite env vars for Supabase; client only when configured.
+
+**Scope:** Use `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`; create Supabase client only when both set. .env.example with comment. When unset, app runs local-only (no sign-in UI).
+
+**Acceptance criteria:** With env set, Supabase client is used for auth/storage; without env, no auth UI and localStorage only.
+
+**Files touched:** src/auth/supabase.ts, .env.example.
+
+---
+
+## T21 — Optional auth (Phase 3)
+
+**Title:** Supabase Auth, sign-in/sign-out UI, useAuth.
+
+**Scope:** Auth module (getSession, onAuthStateChange, signInWithPassword, signOut); AuthProvider and useAuth(); minimal sign-in form and “Sign out” in header (AuthBar). Email/password for MVP.
+
+**Acceptance criteria:** With Supabase configured, sign in and sign out work; session survives reload; without config, no auth UI.
+
+**Files touched:** src/auth/supabase.ts, src/auth/AuthContext.tsx, src/components/AuthBar.tsx, src/main.tsx, src/App.tsx.
+
+---
+
+## T22 — Per-user persistence (Phase 3)
+
+**Title:** Supabase table, RLS, persistence abstraction, useDashboard integration.
+
+**Scope:** Table `dashboard_state` (user_id, state jsonb, updated_at); RLS so users only access own row. Load/save from Supabase when signed in; localStorage when not. useDashboard uses useAuth and chooses source; debounced remote save.
+
+**Acceptance criteria:** Signed-in user: state persists to Supabase and restores on reload; sign out then sign in restores cloud state. Local-only when not signed in.
+
+**Files touched:** src/persistence/supabaseStorage.ts, src/persistence/localStorage.ts (export normalizer), src/hooks/useDashboard.ts, docs/supabase-setup.md.
+
+---
+
 ## Summary
 
 | ID | Title |
@@ -416,3 +464,7 @@ Define and implement an equation for computing a parent domain’s progress % fr
 | T16 | Multi-series radar and legend |
 | T17 | Pixel/TCG visual pass |
 | T18 | Progress % from child nodes (roadmap) |
+| T19 | Deploy static app to Fly.io (Phase 3) |
+| T20 | Env-based config and optional Supabase client (Phase 3) |
+| T21 | Optional auth (Phase 3) |
+| T22 | Per-user persistence (Phase 3) |

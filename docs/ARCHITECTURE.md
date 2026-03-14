@@ -247,7 +247,32 @@ Once the `life-dashboard/` contents are promoted to the root, `docs/DEV.md` shou
 - Build: `npm run build`.
 - Lint/typecheck: project-specific scripts (e.g. `npm run lint`, `npm run typecheck`).
 
-No backend or external services are assumed for MVP.
+No backend or external services are assumed for MVP. **Phase 3** adds optional deployment, auth, and cloud persistence (see §8).
+
+---
+
+## 8. Deployment, auth, and per-user persistence (Phase 3)
+
+**Deployment:** The static Vite build is deployed to Fly.io via a multi-stage Dockerfile (node build, nginx serve with SPA fallback). See `fly.toml` and [docs/DEV.md](DEV.md) “Deploy to Fly.io”. Env-based config only; no secrets in repo.
+
+**Auth:** Optional sign-in via Supabase Auth. When `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are set, the app shows Sign in / Sign out and uses Supabase for session. When unset, the app is local-only (no auth UI). Auth state is provided by `AuthProvider` and `useAuth()`; see `src/auth/`.
+
+**Persistence:** When the user is **not** signed in, dashboard state is loaded and saved from `localStorage` only (unchanged from MVP). When the user **is** signed in, state is loaded from and saved to Supabase table `dashboard_state` (keyed by user id), with RLS so users only access their own row. The persistence layer in `useDashboard` chooses source by auth: local vs remote (debounced save to Supabase). See [docs/supabase-setup.md](supabase-setup.md) for table and RLS SQL.
+
+```mermaid
+flowchart LR
+  App[App]
+  useAuth[useAuth]
+  useDashboard[useDashboard]
+  Local[localStorage]
+  Supabase[Supabase Auth + DB]
+  App --> useAuth
+  App --> useDashboard
+  useDashboard --> useAuth
+  useDashboard -->|"no user"| Local
+  useDashboard -->|"user"| Supabase
+  useAuth --> Supabase
+```
 
 ---
 
