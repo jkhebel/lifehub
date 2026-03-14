@@ -7,15 +7,13 @@ import {
 } from './gamification';
 import type { Area } from '../types';
 
-const stubArea = (id: string, name: string): Area =>
-  ({
-    id,
-    name,
-    color: '#333',
-    parentId: null,
-    trackers: [],
-    children: [],
-  }) as Area;
+const stubArea = (id: string, name: string): Area => ({
+  id,
+  name,
+  color: '#333',
+  parentId: null,
+  children: [],
+});
 
 describe('progressToLevel', () => {
   it('maps 0–25 to 1', () => {

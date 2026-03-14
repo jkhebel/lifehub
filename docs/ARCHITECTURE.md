@@ -154,8 +154,8 @@ Core components include:
 - `CharacterCard`:
   - Shows key stats, level, and flavor text.
   - Pulls from the same derived metrics used by the bullseye.
-- `StatEditors`:
-  - Controls to adjust current values, targets, or metadata.
+- `DomainPanel`:
+  - Single bottom panel: current domain’s children, add subdomain, set/edit metric (binary, progress, stages), derive from children, delete domain.
 - Layout and chrome:
   - Shell, navigation, settings, etc.
 
@@ -179,7 +179,7 @@ Constraints:
 
 ### 4.1 JSON configuration source and schema
 
-The stat-tree shape (Area, Tracker, aggregation) is documented in [docs/JSON-MODEL.md](JSON-MODEL.md). Config may be loaded from a bundled default or from user-supplied JSON; the model layer consumes a validated structure only.
+The stat-tree shape (Area, optional DomainMetric, aggregation) is documented in [docs/JSON-MODEL.md](JSON-MODEL.md). Config may be loaded from a bundled default or from user-supplied JSON; the model layer consumes a validated structure only.
 
 In the near term, there are two primary ways the app might receive its JSON:
 
@@ -209,41 +209,28 @@ These outputs feed:
 - The character card (headline stats).
 - Any future charts or reports.
 
-**Current progress formulas (Phase 1 implementation):**
+**Current progress (Phase 1 — unified domain metrics):**
 
-- **Per-tracker completion (0–100%):**
-  - `boolean`: 100 if value truthy, else 0.
-  - If `target` present: `min((value / target) * 100, 100)`.
-  - Else if `max` present: `(value / max) * 100`.
-  - Else: 50 (no target/max).
-- **Per-area completion:** Combine tracker and child completions using the area’s `aggregation`:
-  - `average` (default): mean of all tracker and child completion values.
-  - `weighted`: weighted mean using each tracker’s `weight` (default 1) and child weight 1.
-  - `minimum`: minimum of all tracker and child completion values.
+A single function **`calculateDomainProgress(domain)`** in the model layer (`src/model/derivedMetrics.ts`) computes 0–100% per node:
 
-Behavior is deterministic for the same tree and values. These formulas may live in the model layer (e.g. `src/model/` or `src/domain/`) or in a hook that the architecture later refactors into the model; see T2.
+- **If the node has a `metric`:**
+  - **binary:** 100 if `value === 1`, else 0.
+  - **progress:** `min(100, (current / max) * 100)` when `max > 0`; else 0.
+  - **stages:** If `stages.length <= 1`, 100 when `currentIndex === 0` else 0; else `(currentIndex / (stages.length - 1)) * 100`.
+- **Else if the node has children:** Aggregate children’s progress using the node’s `aggregation`:
+  - `average` (default): mean of children’s progress.
+  - `minimum`: minimum of children’s progress.
+- **Else:** 0 (leaf with no metric).
 
-**Milestone progress:** The model layer also computes **milestone-based progress** per area from the completion log and area achievements (see §5). The bullseye can show either tracker-based or milestone-based progress via a view toggle.
+Behavior is deterministic for the same tree and values. The bullseye and character card both use this single progress value; there is no separate “trackers vs milestones” source.
 
-**Gamification (levels, badges, XP):** Level and badge computations live in the **model layer** (`src/model/gamification.ts` and derived metrics). They consume normalized completion, the achievement tree, and the completion log. The character card and other UI read precomputed level/badge/XP values from the model.
+**Gamification (deferred):** Levels, badges, and XP are not in scope for the current refactor. When re-added, they can be keyed off “binary domain completed” and optional progress/stages thresholds; see PROJECT.md and the roadmap.
 
 ---
 
-## 5. Gamification Surfaces
+## 5. Gamification (deferred)
 
-Gamification is layered **on top of** the JSON model and derived metrics.
-
-**Implemented surfaces:**
-
-- **Global character level (1–4):** Derived from aggregate tracker completion (average of root areas).
-- **XP and XP level:** Per-domain XP is stored in user state; global XP is the sum. XP level formula: `floor(sqrt(globalXp / 100)) + 1`. Tasks and milestones grant configurable `xpReward` on completion.
-- **Milestone progress:** Per-area progress based on completed milestones vs total milestones (from `area.achievements` and completion log). The bullseye supports a “By trackers” / “By milestones” view toggle.
-- **Badges:** Progress-based (Getting started, Halfway, On track, Fully balanced) and milestone-based (First milestone, Five milestones, Ten milestones). Unlocked badge ids are stored in user state.
-- **Cosmetics (titles, avatar):** Titles and avatar skins unlock by milestone count; user selects one title and one avatar to display on the character card. No currency or loot boxes.
-
-**User state (gamification):** Persisted with the rest of dashboard state: `completionLog`, `domainXp`, `unlockedBadges`, `unlockedTitles`, `avatarUnlocks`, `selectedAvatar`, `selectedTitle`. See [JSON-MODEL.md](JSON-MODEL.md) §6.
-
-Architect and Game Design agents define exact rules and thresholds; the architecture keeps computation in the model layer and presentation in components.
+Gamification (XP, badges, avatar, titles) is **deferred** until after the unified domain-metrics refactor and trial usage. The app currently persists only `areas`, `currentAreaId`, and `breadcrumbs`. When gamification is re-added, it can be keyed off “binary domain completed” and optional progress/stages thresholds; user state for gamification can be reintroduced in a later phase. See PROJECT.md and the roadmap.
 
 ---
 

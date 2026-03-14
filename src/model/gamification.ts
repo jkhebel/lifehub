@@ -1,6 +1,9 @@
-import { Area } from '../types';
-import { getMilestoneCounts } from './derivedMetrics';
-import type { CompletionLogEntry } from '../types';
+import type { Area } from '../types';
+
+/** Stub: milestone-based features deferred; no completion log in unified model yet. */
+function getMilestoneCounts(_areas: Area[], _completionLog: unknown[]): { completed: number } {
+  return { completed: 0 };
+}
 
 /**
  * Map overall progress (0–100) to a level 1–4. Shared by global and per-domain level.
@@ -82,10 +85,11 @@ const MILESTONE_BADGES: { id: string; label: string; minMilestones: number }[] =
 
 /**
  * Returns badge ids that are earned by current milestone count (for merging into unlockedBadges).
+ * Stub: milestone completion log deferred in unified model.
  */
 export function getEarnedMilestoneBadges(
   areas: Area[],
-  completionLog: CompletionLogEntry[]
+  completionLog: unknown[]
 ): string[] {
   const { completed } = getMilestoneCounts(areas, completionLog);
   return MILESTONE_BADGES.filter((b) => completed >= b.minMilestones).map((b) => b.id);
@@ -95,7 +99,7 @@ export function getEarnedMilestoneBadges(
 export function getAllEarnedBadgeIds(
   areas: Area[],
   getAreaProgress: (area: Area) => number,
-  completionLog: CompletionLogEntry[]
+  completionLog: unknown[]
 ): string[] {
   const progressBadges = getBadges(areas, getAreaProgress).map((b) => b.id);
   const milestoneBadges = getEarnedMilestoneBadges(areas, completionLog);
@@ -112,7 +116,7 @@ export const TITLE_DEFINITIONS: { id: string; label: string; minMilestones: numb
 
 export function getEarnedTitleIds(
   _areas: Area[],
-  completionLog: CompletionLogEntry[]
+  completionLog: unknown[]
 ): string[] {
   const { completed } = getMilestoneCounts(_areas, completionLog);
   return TITLE_DEFINITIONS.filter((t) => t.id && completed >= t.minMilestones).map((t) => t.id);
@@ -134,7 +138,7 @@ export const AVATAR_DEFINITIONS: AvatarDefinition[] = [
 
 export function getEarnedAvatarIds(
   areas: Area[],
-  completionLog: CompletionLogEntry[]
+  completionLog: unknown[]
 ): string[] {
   const { completed } = getMilestoneCounts(areas, completionLog);
   return AVATAR_DEFINITIONS.filter((a) => (a.minMilestones ?? 0) <= completed).map((a) => a.id);

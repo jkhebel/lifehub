@@ -1,12 +1,11 @@
 import { useState } from 'react';
 import {
   BullseyeDiagram,
-  TrackerPanel,
   Breadcrumbs,
   AddAreaModal,
   DomainTree,
   CharacterCard,
-  AchievementsPanel,
+  DomainPanel,
 } from './components';
 import { useDashboard } from './hooks/useDashboard';
 import type { Area } from './types';
@@ -30,47 +29,28 @@ function App() {
     getBreadcrumbAreas,
     addArea,
     updateArea,
+    updateDomainMetric,
     deleteArea,
     moveArea,
-    addTracker,
-    updateTracker,
-    deleteTracker,
-    addAchievement,
-    completeAchievement,
-    isAchievementCompleted,
-    setSelectedAvatar,
-    setSelectedTitle,
-    calculateAreaProgress,
-    calculateMilestoneProgress,
+    calculateDomainProgress,
     resetData,
   } = useDashboard();
 
   const [isAddingArea, setIsAddingArea] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [areaToDeleteId, setAreaToDeleteId] = useState<string | null>(null);
-  const [showGamification, setShowGamification] = useState(true);
-  const [radarView, setRadarView] = useState<'trackers' | 'milestones'>('trackers');
-  const [xpToast, setXpToast] = useState<number | null>(null);
 
   const breadcrumbs = getBreadcrumbAreas();
 
-  const handleXpGained = (amount: number) => {
-    setXpToast(amount);
-    setTimeout(() => setXpToast(null), 2000);
-  };
-
   const handleAddArea = (name: string, color: string, icon?: string) => {
-    addArea(currentArea?.id || null, name, color);
-    // If icon provided, update the area (simplified - in real app would pass icon to addArea)
+    addArea(currentArea?.id ?? null, name, color);
     if (icon) {
-      // The addArea creates the area, we'd need to get its ID to update
-      // For now, icon is handled in the modal
+      // New area was just added; we could look it up by name to set icon (simplified)
     }
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-sky-50 via-amber-50 to-pink-50 text-slate-900">
-      {/* Header */}
       <header className="border-b border-indigo-100/80 bg-white/80 backdrop-blur-sm sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
@@ -84,26 +64,21 @@ function App() {
                 </div>
               )}
             </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setShowSettings(!showSettings)}
-                className="flex items-center gap-2 px-2 py-1 text-slate-500 hover:text-slate-900 hover:bg-indigo-100 rounded-[6px] border border-indigo-200 transition-colors text-sm"
-                type="button"
-                aria-haspopup="dialog"
-                aria-expanded={showSettings}
-                aria-controls="settings-panel"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                <span className="hidden sm:inline">Settings</span>
-              </button>
-            </div>
+            <button
+              onClick={() => setShowSettings(!showSettings)}
+              className="flex items-center gap-2 px-2 py-1 text-slate-500 hover:text-slate-900 hover:bg-indigo-100 rounded-[6px] border border-indigo-200 transition-colors text-sm"
+              type="button"
+              aria-haspopup="dialog"
+              aria-expanded={showSettings}
+              aria-controls="settings-panel"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              <span className="hidden sm:inline">Settings</span>
+            </button>
           </div>
-
-          {/* Mobile breadcrumbs */}
           {breadcrumbs.length > 0 && (
             <div className="sm:hidden mt-3">
               <Breadcrumbs areas={breadcrumbs} onNavigate={navigateToArea} />
@@ -112,39 +87,22 @@ function App() {
         </div>
       </header>
 
-      {/* Settings dropdown */}
       {showSettings && (
         <div
           id="settings-panel"
           role="dialog"
           aria-modal="false"
           aria-label="Settings"
-          className="absolute right-4 top-16 bg-white border border-indigo-100 rounded-xl shadow-[4px_4px_0_0_rgba(129,140,248,0.6)] z-50 p-4 w-72"
+          className="absolute right-4 top-16 bg-white border border-indigo-100 rounded-xl shadow-lg z-50 p-4 w-72"
         >
           <h3 className="font-medium mb-2">Settings</h3>
           <p className="text-slate-500 text-xs mb-4">
-            Tune how Life Dashboard feels. Changes affect only this browser.
+            Changes affect only this browser.
           </p>
-
           <div className="space-y-3">
-            <label className="flex items-start gap-2 text-sm text-slate-800">
-              <input
-                type="checkbox"
-                className="mt-1 rounded border-indigo-300 bg-indigo-50 text-sky-700 focus:ring-sky-500"
-                checked={showGamification}
-                onChange={(e) => setShowGamification(e.target.checked)}
-              />
-              <span>
-                Show levels and badges
-                <span className="block text-xs text-slate-500">
-                  Toggle RPG-style elements in the character card while keeping stats intact.
-                </span>
-              </span>
-            </label>
-
             <button
               onClick={() => {
-                if (confirm('Reset all areas and trackers to the built-in defaults? This cannot be undone.')) {
+                if (confirm('Reset all domains to the built-in defaults? This cannot be undone.')) {
                   resetData();
                 }
                 setShowSettings(false);
@@ -155,51 +113,21 @@ function App() {
               Reset to defaults
             </button>
             <p className="text-slate-500 text-xs">
-              Your configuration and progress are stored locally in this browser only.
+              Your data is stored locally in this browser only.
             </p>
           </div>
         </div>
       )}
 
-      {/* Main content */}
       <main className="max-w-7xl mx-auto px-4 py-6 md:py-8">
-        {/* Top row: radar chart (left) and quick summary (right) */}
         <div className="grid lg:grid-cols-12 gap-6 lg:gap-8 items-start mb-8">
-          {/* Radar chart section */}
           <section
             aria-label="Radar chart overview"
             className="lg:col-span-7 flex flex-col items-center order-1"
           >
-            <div className="flex items-center justify-between w-full mb-3">
-              <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wider">
-                Radar
-              </h2>
-              <div className="inline-flex rounded-lg border border-slate-300 overflow-hidden" role="group" aria-label="Radar progress view">
-                <button
-                  type="button"
-                  onClick={() => setRadarView('trackers')}
-                  className={`px-3 py-1.5 text-sm transition-colors ${
-                    radarView === 'trackers'
-                      ? 'bg-sky-500 text-white'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
-                >
-                  By trackers
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setRadarView('milestones')}
-                  className={`px-3 py-1.5 text-sm transition-colors ${
-                    radarView === 'milestones'
-                      ? 'bg-sky-500 text-white'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
-                >
-                  By milestones
-                </button>
-              </div>
-            </div>
-            {/* Current area info */}
+            <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3 self-start">
+              Radar
+            </h2>
             {currentArea && (
               <div className="mb-4 text-center">
                 <h2 className="text-2xl font-extrabold flex items-center justify-center gap-2 tracking-tight">
@@ -221,49 +149,37 @@ function App() {
                     : []
               }
               onAreaClick={(areaId) => navigateToArea(areaId)}
-              calculateProgress={radarView === 'milestones' ? calculateMilestoneProgress : calculateAreaProgress}
+              calculateProgress={calculateDomainProgress}
               centerLabel={currentArea?.name || 'Life'}
               onCenterClick={currentArea ? navigateUp : undefined}
             />
 
-            {/* Legend / Sub-areas count */}
-            <div className="mt-4 text-center space-y-1">
+            <div className="mt-4 text-center">
               <p className="text-slate-500 text-sm">
                 {displayAreas.length > 0
-                  ? `${displayAreas.length} area${displayAreas.length !== 1 ? 's' : ''} • Click an axis to focus and log trackers`
+                  ? `${displayAreas.length} domain${displayAreas.length !== 1 ? 's' : ''} • Click an axis to focus • Set metrics to see progress`
                   : currentArea
-                    ? 'Single domain — add sub-areas or log trackers here.'
-                    : 'Select a domain in the list or add areas to see your radar.'
+                    ? 'Single domain — add subdomains or set a metric here.'
+                    : 'Select a domain in the list or add domains to see your radar.'
                 }
               </p>
-              {radarView === 'milestones' && (
-                <p className="text-slate-400 text-xs">
-                  Add milestones in each domain (Milestones panel) to see progress here.
-                </p>
-              )}
             </div>
-
           </section>
 
-          {/* Right column: Character card (with Domains + Add Area inside) */}
           <section
             aria-label="Character and domains"
             className="lg:col-span-5 order-2"
           >
             <CharacterCard
               areas={state.areas}
-              calculateProgress={calculateAreaProgress}
-              showGamification={showGamification}
-              gamification={state.gamification}
-              onSelectAvatar={setSelectedAvatar}
-              onSelectTitle={setSelectedTitle}
+              calculateProgress={calculateDomainProgress}
             >
               <DomainTree
                 areas={state.areas}
                 selectedAreaId={state.currentAreaId}
                 onSelect={navigateToArea}
-                calculateProgress={calculateAreaProgress}
-                showGamification={showGamification}
+                calculateProgress={calculateDomainProgress}
+                showGamification={false}
                 onMoveArea={moveArea}
                 nested
               />
@@ -275,50 +191,30 @@ function App() {
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
-                Add Area
+                Add domain
               </button>
             </CharacterCard>
           </section>
         </div>
 
-        {/* Lower row: trackers and achievements */}
         <div className="grid lg:grid-cols-12 gap-6 lg:gap-8 items-start">
-          <section
-            aria-label="Trackers and editors"
-            className="lg:col-span-7"
-          >
+          <section aria-label="Current domain" className="lg:col-span-12">
             <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">
-              Trackers
+              Domain
             </h2>
-            <TrackerPanel
+            <DomainPanel
               area={currentArea}
+              calculateProgress={calculateDomainProgress}
               onUpdateArea={updateArea}
-              onUpdateTracker={updateTracker}
-              onDeleteTracker={deleteTracker}
-              onAddTracker={addTracker}
-              calculateProgress={calculateAreaProgress}
+              onUpdateDomainMetric={updateDomainMetric}
+              onAddArea={addArea}
+              onSelectArea={navigateToArea}
               onDeleteAreaRequest={(id) => setAreaToDeleteId(id)}
-            />
-          </section>
-          <section
-            aria-label="Milestones"
-            className="lg:col-span-5"
-          >
-            <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">
-              Milestones
-            </h2>
-            <AchievementsPanel
-              area={currentArea}
-              onAddAchievement={addAchievement}
-              onCompleteAchievement={completeAchievement}
-              isAchievementCompleted={isAchievementCompleted}
-              onXpGained={handleXpGained}
             />
           </section>
         </div>
       </main>
 
-      {/* Add Area Modal */}
       <AddAreaModal
         isOpen={isAddingArea}
         onClose={() => setIsAddingArea(false)}
@@ -326,18 +222,6 @@ function App() {
         parentName={currentArea?.name}
       />
 
-      {/* XP gained toast */}
-      {xpToast !== null && (
-        <div
-          role="status"
-          aria-live="polite"
-          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-lg bg-amber-500 text-white font-semibold shadow-lg animate-fade-in"
-        >
-          +{xpToast} XP
-        </div>
-      )}
-
-      {/* Click outside to close settings */}
       {showSettings && (
         <div
           className="fixed inset-0 z-40"
@@ -346,7 +230,6 @@ function App() {
         />
       )}
 
-      {/* Delete area dialog */}
       {areaToDeleteId && (() => {
         const areaToDelete = findAreaById(state.areas, areaToDeleteId);
         if (!areaToDelete) return null;
@@ -354,7 +237,6 @@ function App() {
           <DeleteAreaDialog
             areaName={areaToDelete.name}
             onConfirm={() => {
-              if (currentArea?.id === areaToDeleteId) navigateUp();
               deleteArea(areaToDeleteId);
               setAreaToDeleteId(null);
             }}
@@ -383,38 +265,37 @@ const DeleteAreaDialog = ({
     className="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
     role="dialog"
     aria-modal="true"
-    aria-label="Delete area"
+    aria-label="Delete domain"
     onClick={onCancel}
   >
     <div
-      className="bg-white border-2 border-slate-200 rounded-xl p-5 w-full max-w-sm shadow-[4px_4px_0_rgba(148,163,184,0.4)]"
+      className="bg-white border-2 border-slate-200 rounded-xl p-5 w-full max-w-sm shadow-lg"
       onClick={(e) => e.stopPropagation()}
     >
-      <h2 className="text-lg font-semibold mb-3 text-rose-600">Delete area</h2>
+      <h2 className="text-lg font-semibold mb-3 text-rose-600">Delete domain</h2>
       <p className="text-sm text-slate-700 mb-2">
         Are you sure you want to delete <span className="font-semibold">{areaName}</span> and
-        all of its sub-areas and trackers?
+        all of its subdomains?
       </p>
       <p className="text-xs text-slate-500 mb-4">
-        This action cannot be undone, but you can always recreate the area later.
+        This cannot be undone.
       </p>
       <div className="flex justify-end gap-2">
         <button
           type="button"
           onClick={onCancel}
-          className="px-3 py-1.5 text-sm rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+          className="px-3 py-1.5 text-sm rounded-lg text-slate-600 hover:bg-slate-100"
         >
           Cancel
         </button>
         <button
           type="button"
           onClick={onConfirm}
-          className="px-3 py-1.5 text-sm rounded-lg bg-rose-500 hover:bg-rose-600 text-white transition-colors"
+          className="px-3 py-1.5 text-sm rounded-lg bg-rose-500 hover:bg-rose-600 text-white"
         >
-          Delete area
+          Delete
         </button>
       </div>
     </div>
   </div>
 );
-
