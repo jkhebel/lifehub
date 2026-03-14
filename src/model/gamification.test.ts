@@ -4,6 +4,9 @@ import {
   getPerDomainLevels,
   getBadges,
   progressToLevel,
+  getLevelFromXp,
+  getXpProgressInLevel,
+  XP_PER_LEVEL,
 } from './gamification';
 import type { Area } from '../types';
 
@@ -113,5 +116,32 @@ describe('getBadges', () => {
       'fully-balanced',
     ]);
     expect(badges.map((b) => b.label)).toContain('Fully balanced');
+  });
+});
+
+describe('getLevelFromXp', () => {
+  it('returns 1 for 0 XP', () => {
+    expect(getLevelFromXp(0)).toBe(1);
+  });
+  it('returns 2 at 100 XP', () => {
+    expect(getLevelFromXp(XP_PER_LEVEL)).toBe(2);
+    expect(getLevelFromXp(99)).toBe(1);
+  });
+  it('returns 3 at 400 XP', () => {
+    expect(getLevelFromXp(400)).toBe(3);
+    expect(getLevelFromXp(399)).toBe(2);
+  });
+});
+
+describe('getXpProgressInLevel', () => {
+  it('returns progress 0 at level 1 start', () => {
+    const r = getXpProgressInLevel(0);
+    expect(r.currentLevel).toBe(1);
+    expect(r.progress01).toBe(0);
+  });
+  it('returns progress 0.5 at 50 XP', () => {
+    const r = getXpProgressInLevel(50);
+    expect(r.currentLevel).toBe(1);
+    expect(r.progress01).toBe(0.5);
   });
 });

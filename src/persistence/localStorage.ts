@@ -4,13 +4,27 @@ import { getDefaultAreas } from '../config/loadConfig';
 
 const STORAGE_KEY = 'life-dashboard-data';
 
-/** Normalize loaded state: areas, currentAreaId, breadcrumbs, pinnedAreaIds. */
+/** Normalize loaded state: areas, currentAreaId, breadcrumbs, pinnedAreaIds, optional gamification. */
 function normalizeLoadedState(parsed: Partial<DashboardState>): DashboardState {
+  const gamification = parsed.gamification;
+  const normalizedGamification =
+    gamification &&
+    typeof gamification.totalXp === 'number' &&
+    Array.isArray(gamification.completionLog)
+      ? {
+          totalXp: gamification.totalXp,
+          completionLog: (gamification.completionLog as { domainId?: string; completedAt?: string }[])
+            .filter((e) => e && typeof e.domainId === 'string' && typeof e.completedAt === 'string')
+            .map((e) => ({ domainId: e.domainId!, completedAt: e.completedAt! })),
+        }
+      : undefined;
+
   return {
     areas: Array.isArray(parsed.areas) ? parsed.areas : getDefaultAreas(),
     currentAreaId: parsed.currentAreaId ?? null,
     breadcrumbs: Array.isArray(parsed.breadcrumbs) ? parsed.breadcrumbs : [],
     pinnedAreaIds: Array.isArray(parsed.pinnedAreaIds) ? parsed.pinnedAreaIds : [],
+    gamification: normalizedGamification ?? { totalXp: 0, completionLog: [] },
   };
 }
 

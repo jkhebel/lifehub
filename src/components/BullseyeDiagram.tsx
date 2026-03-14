@@ -1,9 +1,28 @@
-import { Area } from '../types';
+import type { Area } from '../types';
+import type { ProgressToNextLevelResult } from '../model/derivedMetrics';
+
+export type RadarViewMode = 'relative' | 'objective';
+
+export interface RadarSeries {
+  name: string;
+  getValue: (area: Area) => number;
+}
+
+const SERIES_COLORS = [
+  { fill: 'rgba(45, 212, 191, 0.35)', stroke: '#14b8a6' },
+  { fill: 'rgba(139, 92, 246, 0.35)', stroke: '#7c3aed' },
+  { fill: 'rgba(245, 158, 11, 0.35)', stroke: '#d97706' },
+  { fill: 'rgba(236, 72, 153, 0.35)', stroke: '#db2777' },
+];
 
 interface BullseyeDiagramProps {
   areas: Area[];
   onAreaClick: (areaId: string) => void;
   calculateProgress: (area: Area) => number;
+  getProgressToNextLevel?: (area: Area) => ProgressToNextLevelResult;
+  viewMode?: RadarViewMode;
+  /** When viewMode is 'objective', optional multiple series (each = one polygon + legend entry). */
+  series?: RadarSeries[];
   centerLabel?: string;
   onCenterClick?: () => void;
 }
@@ -26,6 +45,9 @@ export const BullseyeDiagram = ({
   areas,
   onAreaClick,
   calculateProgress,
+  getProgressToNextLevel,
+  viewMode = 'objective',
+  series = [],
   centerLabel = 'Life',
   onCenterClick,
 }: BullseyeDiagramProps) => {
@@ -36,9 +58,13 @@ export const BullseyeDiagram = ({
   const labelRadius = maxRadius + 12;
   const scaleLevels = [0, 25, 50, 75, 100];
   const gridStroke = '#e5e7eb';
-  const dataFill = 'rgba(45, 212, 191, 0.35)'; // teal, translucent
-  const dataStroke = '#14b8a6';
   const dataPointRadius = 4;
+  const useMultiSeries = viewMode === 'objective' && series.length > 0;
+  const activeSeries = useMultiSeries ? series : [{ name: 'Progress', getValue: (a: Area) => getValueForAxis(a) }];
+  const getValueForAxis = (area: Area): number =>
+    viewMode === 'relative' && getProgressToNextLevel
+      ? getProgressToNextLevel(area).progress01 * 100
+      : calculateProgress(area);
 
   const n = areas.length;
 
@@ -76,12 +102,15 @@ export const BullseyeDiagram = ({
     return axisAngles.map((angle) => polarToCartesian(center, center, r, angle));
   };
 
-  // Data polygon vertices: one point per area at progress along its axis
-  const dataPoints = areas.map((area, i) => {
-    const progress = calculateProgress(area);
-    const r = progressToRadius(progress, minRadius, maxRadius);
-    return polarToCartesian(center, center, r, axisAngles[i]);
-  });
+  // Per-series polygon points (for multi-series or single default)
+  const seriesDataPoints = activeSeries.map((s) =>
+    areas.map((area, i) => {
+      const progress = s.getValue(area);
+      const r = progressToRadius(progress, minRadius, maxRadius);
+      return polarToCartesian(center, center, r, axisAngles[i]);
+    })
+  );
+  const primaryDataPoints = seriesDataPoints[0] ?? [];
 
   // Wedge path for hit area (center → axis i outer → axis i+1 outer → center)
   const wedgePath = (axisIndex: number) => {
@@ -153,21 +182,27 @@ export const BullseyeDiagram = ({
           );
         })}
 
-        {/* Data polygon (single filled shape connecting all progress points) */}
-        <polygon
-          points={dataPoints.map((p) => `${p.x},${p.y}`).join(' ')}
-          fill={dataFill}
-          stroke={dataStroke}
-          strokeWidth={2}
-          className="transition-all duration-500"
-        />
-        {dataPoints.map((p, i) => (
+        {/* Data polygon(s): one per series */}
+        {seriesDataPoints.map((points, idx) => {
+          const colors = SERIES_COLORS[idx % SERIES_COLORS.length]!;
+          return (
+            <polygon
+              key={activeSeries[idx]!.name}
+              points={points.map((p) => `${p.x},${p.y}`).join(' ')}
+              fill={colors.fill}
+              stroke={colors.stroke}
+              strokeWidth={2}
+              className="transition-all duration-500"
+            />
+          );
+        })}
+        {primaryDataPoints.map((p, i) => (
           <circle
-            key={areas[i].id}
+            key={areas[i]!.id}
             cx={p.x}
             cy={p.y}
             r={dataPointRadius}
-            fill={dataStroke}
+            fill={SERIES_COLORS[0]!.stroke}
             className="pointer-events-none"
           />
         ))}
@@ -188,14 +223,18 @@ export const BullseyeDiagram = ({
             }}
             role="button"
             tabIndex={0}
-            aria-label={`${area.name}, ${Math.round(calculateProgress(area))} percent`}
+            aria-label={`${area.name}, ${Math.round(getValueForAxis(area))} percent`}
           />
         ))}
 
         {/* Category labels at outer end of each axis */}
         {areas.map((area, i) => {
           const p = polarToCartesian(center, center, labelRadius, axisAngles[i]);
-          const progress = calculateProgress(area);
+          const progress = getValueForAxis(area);
+          const tierLabel =
+            viewMode === 'relative' && getProgressToNextLevel
+              ? getProgressToNextLevel(area).currentTierLabel
+              : null;
           const isRight = p.x >= center;
           return (
             <g key={area.id} className="pointer-events-none">
@@ -204,7 +243,7 @@ export const BullseyeDiagram = ({
                 y={p.y}
                 textAnchor={isRight ? 'start' : 'end'}
                 dominantBaseline="middle"
-                className="fill-slate-700 text-xs font-semibold"
+                className="fill-slate-700 text-xs font-semibold font-pixel"
               >
                 {area.icon && `${area.icon} `}
                 {area.name}
@@ -216,7 +255,7 @@ export const BullseyeDiagram = ({
                 dominantBaseline="middle"
                 className="fill-slate-500 text-[10px] tabular-nums"
               >
-                {Math.round(progress)}%
+                {tierLabel != null ? tierLabel : `${Math.round(progress)}%`}
               </text>
             </g>
           );
@@ -258,6 +297,22 @@ export const BullseyeDiagram = ({
           )}
         </g>
       </svg>
+      {activeSeries.length > 1 && (
+        <div className="flex flex-wrap justify-center gap-3 mt-2 text-[10px]" role="list" aria-label="Radar series legend">
+          {activeSeries.map((s, idx) => {
+            const colors = SERIES_COLORS[idx % SERIES_COLORS.length]!;
+            return (
+              <span key={s.name} className="inline-flex items-center gap-1.5" role="listitem">
+                <span
+                  className="inline-block w-3 h-2 rounded-sm border border-current"
+                  style={{ backgroundColor: colors.fill, borderColor: colors.stroke }}
+                />
+                <span className="text-slate-600">{s.name}</span>
+              </span>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };

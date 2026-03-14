@@ -33,6 +33,32 @@ function validateMetric(metric: any): boolean {
   if (type === 'stages') {
     if (typeof metric.currentIndex !== 'number' || Number.isNaN(metric.currentIndex)) return false;
     if (!Array.isArray(metric.stages) || metric.stages.length === 0) return false;
+    if (metric.stageBounds !== undefined) {
+      if (!Array.isArray(metric.stageBounds) || metric.stageBounds.length !== metric.stages.length + 1)
+        return false;
+      for (let i = 0; i < metric.stageBounds.length; i++) {
+        if (typeof metric.stageBounds[i] !== 'number' || Number.isNaN(metric.stageBounds[i]))
+          return false;
+        if (i > 0 && metric.stageBounds[i] <= metric.stageBounds[i - 1]) return false;
+      }
+    }
+    if (metric.currentValue !== undefined) {
+      if (typeof metric.currentValue !== 'number' || Number.isNaN(metric.currentValue)) return false;
+    }
+    return true;
+  }
+  if (type === 'levels') {
+    if (!Array.isArray(metric.levels) || metric.levels.length === 0) return false;
+    if (!Array.isArray(metric.parameters)) return false;
+    for (let p = 0; p < metric.parameters.length; p++) {
+      const param = metric.parameters[p];
+      if (typeof param !== 'object' || param == null || typeof param.childId !== 'string') return false;
+      if (!Array.isArray(param.bounds) || param.bounds.length !== metric.levels.length + 1) return false;
+      for (let i = 0; i < param.bounds.length; i++) {
+        if (typeof param.bounds[i] !== 'number' || Number.isNaN(param.bounds[i])) return false;
+        if (i > 0 && param.bounds[i] <= param.bounds[i - 1]) return false;
+      }
+    }
     return true;
   }
   return false;
@@ -59,7 +85,7 @@ export const validateAreas = (raw: unknown): ValidationResult<Area[]> => {
       return null;
     }
 
-    const { id, name, color, parentId, children, metric, aggregation } = area;
+    const { id, name, color, parentId, children, metric, aggregation, statName } = area;
 
     if (typeof id !== 'string' || !id.trim()) {
       errors.push(`${indexPath}.id is required and must be a non-empty string`);
@@ -83,12 +109,16 @@ export const validateAreas = (raw: unknown): ValidationResult<Area[]> => {
 
     if (metric !== undefined && metric !== null) {
       if (!validateMetric(metric)) {
-        errors.push(`${indexPath}.metric must be a valid binary, progress, or stages metric`);
+        errors.push(`${indexPath}.metric must be a valid binary, progress, stages, or levels metric`);
       }
     }
 
     if (aggregation !== undefined && aggregation !== 'average' && aggregation !== 'minimum') {
       errors.push(`${indexPath}.aggregation must be 'average' or 'minimum' when present`);
+    }
+
+    if (statName !== undefined && typeof statName !== 'string') {
+      errors.push(`${indexPath}.statName must be a string when present`);
     }
 
     if (Array.isArray(children)) {

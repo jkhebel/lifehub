@@ -1,9 +1,13 @@
 import { useState, useCallback, useEffect } from 'react';
 import type { Area, DashboardState, DomainMetric } from '../types';
+import { XP_PER_BINARY_COMPLETE } from '../model/gamification';
 import { getDefaultAreas } from '../config/loadConfig';
 import { getResetAreas } from '../data/initialData';
 import { v4 as uuidv4 } from 'uuid';
-import { calculateDomainProgress as calculateDomainProgressModel } from '../model/derivedMetrics';
+import {
+  calculateDomainProgress as calculateDomainProgressModel,
+  getProgressToNextLevel as getProgressToNextLevelModel,
+} from '../model/derivedMetrics';
 import {
   loadDashboardState,
   persistDashboardState,
@@ -16,6 +20,7 @@ export const useDashboard = () => {
       currentAreaId: null,
       breadcrumbs: [],
       pinnedAreaIds: [],
+      gamification: { totalXp: 0, completionLog: [] },
     }))
   );
 
@@ -133,13 +138,32 @@ export const useDashboard = () => {
   }, []);
 
   const updateDomainMetric = useCallback((domainId: string, metric: DomainMetric | null) => {
-    setState(prev => ({
-      ...prev,
-      areas: updateAreasRecursively(prev.areas, domainId, area => ({
+    setState(prev => {
+      const nextAreas = updateAreasRecursively(prev.areas, domainId, area => ({
         ...area,
         metric: metric ?? undefined,
-      })),
-    }));
+      }));
+      const gamification = prev.gamification ?? { totalXp: 0, completionLog: [] };
+      if (
+        metric &&
+        metric.type === 'binary' &&
+        metric.value === 1 &&
+        !gamification.completionLog.some((e) => e.domainId === domainId)
+      ) {
+        return {
+          ...prev,
+          areas: nextAreas,
+          gamification: {
+            totalXp: gamification.totalXp + XP_PER_BINARY_COMPLETE,
+            completionLog: [
+              ...gamification.completionLog,
+              { domainId, completedAt: new Date().toISOString() },
+            ],
+          },
+        };
+      }
+      return { ...prev, areas: nextAreas };
+    });
   }, []);
 
   const subtreeIds = useCallback((area: Area): Set<string> => {
@@ -212,12 +236,37 @@ export const useDashboard = () => {
     return calculateDomainProgressModel(area);
   }, []);
 
+  const getProgressToNextLevel = useCallback((area: Area) => {
+    return getProgressToNextLevelModel(area);
+  }, []);
+
   const resetData = useCallback(() => {
     setState({
       areas: getResetAreas(),
       currentAreaId: null,
       breadcrumbs: [],
       pinnedAreaIds: [],
+      gamification: { totalXp: 0, completionLog: [] },
+    });
+  }, []);
+
+  const replaceState = useCallback((newState: DashboardState) => {
+    const ids = new Set<string>();
+    const collectIds = (areas: Area[]) => {
+      for (const a of areas) {
+        ids.add(a.id);
+        collectIds(a.children);
+      }
+    };
+    collectIds(newState.areas);
+    setState({
+      ...newState,
+      currentAreaId:
+        newState.currentAreaId != null && ids.has(newState.currentAreaId)
+          ? newState.currentAreaId
+          : null,
+      breadcrumbs: (newState.breadcrumbs ?? []).filter((id) => ids.has(id)),
+      pinnedAreaIds: (newState.pinnedAreaIds ?? []).filter((id) => ids.has(id)),
     });
   }, []);
 
@@ -250,8 +299,10 @@ export const useDashboard = () => {
     deleteArea,
     moveArea,
     calculateDomainProgress,
+    getProgressToNextLevel,
     findArea,
     resetData,
+    replaceState,
     togglePin,
   };
 };
