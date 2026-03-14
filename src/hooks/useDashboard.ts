@@ -31,15 +31,21 @@ export const useDashboard = () => {
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const stateRef = useRef<DashboardState>(state);
   const userIdRef = useRef<string | undefined>(user?.id);
+  const loadedForUserIdRef = useRef<string | null>(null);
 
   // When user changes: load from remote or local
   useEffect(() => {
     let cancelled = false;
     if (user) {
+      loadedForUserIdRef.current = null;
       loadRemoteState(user.id).then((remote) => {
-        if (!cancelled && remote) setState(remote);
+        if (!cancelled) {
+          loadedForUserIdRef.current = user.id;
+          setState(remote ?? loadDashboardState<DashboardState>(createDefault));
+        }
       });
     } else {
+      loadedForUserIdRef.current = null;
       setState(loadDashboardState<DashboardState>(createDefault));
     }
     return () => {
@@ -60,6 +66,13 @@ export const useDashboard = () => {
         saveTimeoutRef.current = null;
       }
       persistDashboardState(state);
+      return;
+    }
+    if (loadedForUserIdRef.current !== userId) {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = null;
+      }
       return;
     }
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
