@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import type { Area, DomainMetric, AggregationMode, LevelsParameter, StagesMetric } from '../types';
+import type { Area, DomainMetric, AggregationMode, LevelsMetric, LevelsParameter, StagesMetric } from '../types';
 import { DEFAULT_COLORS, AGGREGATION_MODES } from '../types';
 
 export type DomainModalMode = 'add' | 'edit';
@@ -367,7 +367,7 @@ export function DomainModal({
   const [levelParams, setLevelParams] = useState<LevelsParameter[]>([]);
   const [aggregation, setAggregation] = useState<AggregationMode>('average');
   /** When editing a domain that had a stages metric, keep it so we can re-persist it if user saves without adding parameters. */
-  const initialStagesMetricRef = useRef<StagesMetric | null>(null);
+  const initialMetricRef = useRef<StagesMetric | LevelsMetric | null>(null);
 
   useEffect(() => {
     if (!isOpen || kind !== 'levels') return;
@@ -392,8 +392,12 @@ export function DomainModal({
       setHasMetric(area.metric != null);
       setAggregation(area.aggregation ?? 'average');
       if (area.metric) {
-        initialStagesMetricRef.current = null;
         const metricType = area.metric.type === 'levels' ? 'levels' : area.metric.type === 'stages' ? 'stages' : area.metric.type;
+        if (area.metric.type === 'stages' || area.metric.type === 'levels') {
+          initialMetricRef.current = area.metric;
+        } else {
+          initialMetricRef.current = null;
+        }
         setKind(metricType);
         if (area.metric.type === 'binary') setBinaryValue(area.metric.value);
         if (area.metric.type === 'progress') {
@@ -402,7 +406,6 @@ export function DomainModal({
           setUnit(area.metric.unit ?? '');
         }
         if (area.metric.type === 'stages') {
-          initialStagesMetricRef.current = area.metric;
           setStageNames(area.metric.stages.length ? [...area.metric.stages] : ['']);
           setStageBoundsText(area.metric.stageBounds?.join(', ') ?? '');
           setCurrentValue(area.metric.currentValue != null ? String(area.metric.currentValue) : '');
@@ -432,7 +435,7 @@ export function DomainModal({
         setStagesCurrentIndex(0);
         setLevelNames([]);
         setLevelParams([]);
-        initialStagesMetricRef.current = null;
+        initialMetricRef.current = null;
       }
     } else {
       setName('');
@@ -451,7 +454,7 @@ export function DomainModal({
       setStagesCurrentIndex(0);
       setLevelNames([]);
       setLevelParams([]);
-      initialStagesMetricRef.current = null;
+      initialMetricRef.current = null;
     }
   }, [isOpen, isEdit, area]);
 
@@ -498,8 +501,8 @@ export function DomainModal({
       const parameters = levelParams
         .filter((p) => p.bounds.length === levels.length + 1)
         .map((p) => ({ childId: p.childId, bounds: p.bounds }));
-      if (parameters.length === 0 && initialStagesMetricRef.current) {
-        return initialStagesMetricRef.current;
+      if (parameters.length === 0 && initialMetricRef.current) {
+        return initialMetricRef.current;
       }
       return { type: 'levels', levels, parameters };
     }

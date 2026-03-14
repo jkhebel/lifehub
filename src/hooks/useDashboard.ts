@@ -29,6 +29,8 @@ export const useDashboard = () => {
     loadDashboardState<DashboardState>(createDefault)
   );
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const stateRef = useRef<DashboardState>(state);
+  const userIdRef = useRef<string | undefined>(user?.id);
 
   // When user changes: load from remote or local
   useEffect(() => {
@@ -44,6 +46,10 @@ export const useDashboard = () => {
       cancelled = true;
     };
   }, [user?.id]);
+
+  // Keep refs updated so unmount cleanup can flush latest state
+  stateRef.current = state;
+  userIdRef.current = user?.id;
 
   // Persist: local when no user, remote (debounced) when user
   useEffect(() => {
@@ -67,12 +73,22 @@ export const useDashboard = () => {
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
         saveTimeoutRef.current = null;
-        saveRemoteState(userId, state).catch((err) => {
+      }
+    };
+  }, [state, user?.id]);
+
+  // On unmount only: flush any pending remote save so we don't lose state
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current && userIdRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = null;
+        saveRemoteState(userIdRef.current, stateRef.current).catch((err) => {
           console.error('Failed to sync dashboard state to account', err);
         });
       }
     };
-  }, [state, user?.id]);
+  }, []);
 
   const findArea = useCallback((areas: Area[], id: string): Area | null => {
     for (const area of areas) {
