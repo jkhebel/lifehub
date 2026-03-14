@@ -145,4 +145,29 @@ Dashboard state persisted to localStorage includes:
 
 When an area is deleted, its id and all descendant ids are removed from `pinnedAreaIds` so the list does not retain stale references.
 
-Gamification is implemented (XP from binary completions; level from total XP).
+Gamification is implemented (XP from binary completions; character level derived from total XP). See §7 for the Levels metric and §8 for the JSON view.
+
+---
+
+## 7. Levels metric (derived, not stored)
+
+**Character level** is not stored in the JSON tree. It is **derived** from `gamification.totalXp`: the app uses a sublinear curve so that each level requires more XP than the last. The character card displays this level and an XP progress bar.
+
+**Per-domain “level”** in the UI is also derived:
+
+- For **stages** metrics: the radar’s “To next level” view shows progress toward the *next tier* (e.g. A1 → A2) and displays the current tier label. When `stageBounds` and `currentValue` are set, progress within the current tier is computed from the numeric value.
+- For other metrics: “level” is expressed as the node’s completion percentage (0–100%).
+
+So the JSON schema does not include a `level` field on areas; levels are computed by the model from `gamification`, metric type, and progress.
+
+---
+
+## 8. JSON view (Data as JSON)
+
+The app provides a **Data (JSON)** view (modal) that:
+
+- Shows the full persisted dashboard state as formatted JSON: `areas`, `gamification`, `currentAreaId`, `breadcrumbs`, `pinnedAreaIds`.
+- Allows editing the text and **Apply**ing; the same validation used for config loading (see §5) is run on `areas`. Invalid areas produce an error message; other top-level fields are normalized or preserved from current state if missing.
+- Is useful for power users, backups, and debugging.
+
+The schema described in this document (Area, DomainMetric, persisted state in §6) is what that JSON represents. Any edits via the JSON view must conform to the same validation expectations.
