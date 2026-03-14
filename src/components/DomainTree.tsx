@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { Area } from '../types';
 import { progressToLevel } from '../model/gamification';
 
@@ -37,22 +37,36 @@ interface FlatNode {
   depth: number;
   hasChildren: boolean;
   isExpanded: boolean;
+  /** Parent id (null for root siblings). Used for reorder drop. */
+  parentId: string | null;
+  /** Index among siblings. Used for "insert before" drop. */
+  indexInParent: number;
 }
 
 function flattenTree(
   areas: Area[],
   expandedIds: Set<string>,
-  depth: number
+  depth: number,
+  parentId: string | null = null
 ): FlatNode[] {
   const result: FlatNode[] = [];
-  for (const area of areas) {
+  areas.forEach((area, indexInParent) => {
     const hasChildren = area.children.length > 0;
     const isExpanded = expandedIds.has(area.id);
-    result.push({ area, depth, hasChildren, isExpanded });
+    result.push({
+      area,
+      depth,
+      hasChildren,
+      isExpanded,
+      parentId,
+      indexInParent,
+    });
     if (hasChildren && isExpanded) {
-      result.push(...flattenTree(area.children, expandedIds, depth + 1));
+      result.push(
+        ...flattenTree(area.children, expandedIds, depth + 1, area.id)
+      );
     }
-  }
+  });
   return result;
 }
 
@@ -70,6 +84,8 @@ export const DomainTree = ({
   const [focusedIndex, setFocusedIndex] = useState<number>(0);
   const [dragId, setDragId] = useState<string | null>(null);
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
+  /** When set, show "insert before" line at this sibling position (reorder). */
+  const [dropInsertBefore, setDropInsertBefore] = useState<{ parentId: string | null; indexInParent: number } | null>(null);
 
   const flatNodes = useMemo(
     () => flattenTree(areas, expandedIds, 0),
@@ -155,7 +171,10 @@ export const DomainTree = ({
   const handleDragOver = useCallback((e: React.DragEvent, targetId: string | null) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
-    if (dragId && dragId !== targetId) setDropTargetId(targetId);
+    if (dragId && dragId !== targetId) {
+      setDropTargetId(targetId);
+      setDropInsertBefore(null);
+    }
   }, [dragId]);
 
   const handleDragLeave = useCallback(() => {
@@ -170,11 +189,43 @@ export const DomainTree = ({
     onMoveArea(areaId, targetId);
     setDragId(null);
     setDropTargetId(null);
+    setDropInsertBefore(null);
   }, [onMoveArea]);
+
+  /** Drop zone for "insert before" this sibling (reorder). */
+  const handleInsertBeforeDragOver = useCallback(
+    (e: React.DragEvent, parentId: string | null, indexInParent: number) => {
+      e.preventDefault();
+      e.stopPropagation();
+      e.dataTransfer.dropEffect = 'move';
+      if (dragId) setDropInsertBefore({ parentId, indexInParent });
+      setDropTargetId(null);
+    },
+    [dragId]
+  );
+
+  const handleInsertBeforeDragLeave = useCallback(() => {
+    setDropInsertBefore(null);
+  }, []);
+
+  const handleInsertBeforeDrop = useCallback(
+    (e: React.DragEvent, parentId: string | null, indexInParent: number) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const areaId = e.dataTransfer.getData('text/plain');
+      if (!areaId || !onMoveArea) return;
+      onMoveArea(areaId, parentId, indexInParent);
+      setDragId(null);
+      setDropTargetId(null);
+      setDropInsertBefore(null);
+    },
+    [onMoveArea]
+  );
 
   const handleDragEnd = useCallback(() => {
     setDragId(null);
     setDropTargetId(null);
+    setDropInsertBefore(null);
   }, []);
 
   return (
@@ -196,12 +247,22 @@ export const DomainTree = ({
           </span>
           {!nested && (
             <span className="text-[10px] text-amber-700/60 hidden sm:inline">
-              ↑↓ · Enter · Drag to move
+              ↑↓ · Enter · Drag to reorder or move
             </span>
           )}
         </div>
       </div>
       <ul className={`py-1 overflow-y-auto ${nested ? 'max-h-[320px]' : 'max-h-[380px]'}`} role="group">
+        {/* Drop zone: insert at root index 0 */}
+        {onMoveArea && (
+          <div
+            className={`h-1 -mb-0.5 flex-shrink-0 transition-colors ${dropInsertBefore?.parentId === null && dropInsertBefore?.indexInParent === 0 ? 'bg-amber-400/50 rounded' : 'hover:bg-amber-100/50'}`}
+            onDragOver={(e) => handleInsertBeforeDragOver(e, null, 0)}
+            onDragLeave={handleInsertBeforeDragLeave}
+            onDrop={(e) => handleInsertBeforeDrop(e, null, 0)}
+            aria-hidden
+          />
+        )}
         {/* Life root */}
         <li
           role="treeitem"
@@ -229,20 +290,42 @@ export const DomainTree = ({
           const level = progressToLevel(progress);
           const isDropTarget = dropTargetId === node.area.id;
           const isDragging = dragId === node.area.id;
+          const isInsertBeforeHere =
+            dropInsertBefore?.parentId === node.parentId &&
+            dropInsertBefore?.indexInParent === node.indexInParent;
           return (
-            <li
-              key={node.area.id}
-              role="treeitem"
-              aria-expanded={node.hasChildren ? node.isExpanded : undefined}
-              aria-selected={isSelected}
-              draggable={!!onMoveArea}
-              onDragStart={(e) => onMoveArea && handleDragStart(e, node.area.id)}
-              onDragOver={(e) => handleDragOver(e, node.area.id)}
-              onDragLeave={handleDragLeave}
-              onDrop={(e) => handleDrop(e, node.area.id)}
-              onDragEnd={handleDragEnd}
-              style={{ paddingLeft: `${node.depth * 14 + 8}px` }}
-              className={`
+            <React.Fragment key={node.area.id}>
+              {/* Drop zone: insert before this sibling (reorder) */}
+              {onMoveArea && (
+                <div
+                  className={`h-1 -mb-0.5 flex-shrink-0 transition-colors`}
+                  style={{ marginLeft: `${node.depth * 14 + 8}px` }}
+                  onDragOver={(e) =>
+                    handleInsertBeforeDragOver(e, node.parentId, node.indexInParent)
+                  }
+                  onDragLeave={handleInsertBeforeDragLeave}
+                  onDrop={(e) =>
+                    handleInsertBeforeDrop(e, node.parentId, node.indexInParent)
+                  }
+                  aria-hidden
+                >
+                  {isInsertBeforeHere && (
+                    <div className="h-full w-full bg-amber-400/60 rounded" />
+                  )}
+                </div>
+              )}
+              <li
+                role="treeitem"
+                aria-expanded={node.hasChildren ? node.isExpanded : undefined}
+                aria-selected={isSelected}
+                draggable={!!onMoveArea}
+                onDragStart={(e) => onMoveArea && handleDragStart(e, node.area.id)}
+                onDragOver={(e) => handleDragOver(e, node.area.id)}
+                onDragLeave={handleDragLeave}
+                onDrop={(e) => handleDrop(e, node.area.id)}
+                onDragEnd={handleDragEnd}
+                style={{ paddingLeft: `${node.depth * 14 + 8}px` }}
+                className={`
                 flex items-center gap-2 py-1.5 px-2 rounded-[4px] cursor-pointer
                 ${rowIndex === focusedIndex ? 'bg-amber-100/80' : ''}
                 ${isSelected ? 'ring-1 ring-inset ring-amber-400' : ''}
@@ -303,6 +386,7 @@ export const DomainTree = ({
                 </div>
               </div>
             </li>
+            </React.Fragment>
           );
         })}
       </ul>

@@ -41,6 +41,8 @@ export interface DashboardState {
   areas: Area[];
   currentAreaId: string | null;
   breadcrumbs: string[];
+  /** Pinned (favorite) domain ids for quick access. Order preserved. */
+  pinnedAreaIds: string[];
 }
 
 export const DEFAULT_COLORS = [

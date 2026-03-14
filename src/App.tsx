@@ -33,6 +33,8 @@ function App() {
     moveArea,
     calculateDomainProgress,
     resetData,
+    togglePin,
+    findArea,
   } = useDashboard();
 
   const [isAddingArea, setIsAddingArea] = useState(false);
@@ -168,6 +170,43 @@ function App() {
               areas={state.areas}
               calculateProgress={calculateDomainProgress}
             >
+              {state.pinnedAreaIds.length > 0 && (
+                <div className="mb-3 pb-3 border-b border-indigo-100">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-indigo-700/80">
+                    Pinned
+                  </span>
+                  <div className="flex flex-wrap gap-1.5 mt-1.5">
+                    {state.pinnedAreaIds.map((id) => {
+                      const area = findArea(state.areas, id);
+                      if (!area) return null;
+                      return (
+                        <button
+                          key={id}
+                          type="button"
+                          onClick={() => navigateToArea(id)}
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-sm font-medium border border-indigo-200 bg-indigo-50/80 hover:bg-indigo-100/80 text-indigo-800 transition-colors"
+                        >
+                          {area.icon && <span>{area.icon}</span>}
+                          <span className="truncate max-w-[120px]">{area.name}</span>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              togglePin(id);
+                            }}
+                            className="p-0.5 -mr-0.5 rounded hover:bg-indigo-200/80 text-amber-600"
+                            aria-label="Unpin"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                            </svg>
+                          </button>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
               <DomainTree
                 areas={state.areas}
                 selectedAreaId={state.currentAreaId}
@@ -221,6 +260,8 @@ function App() {
               }
             : undefined
         }
+        isPinned={areaToEdit ? state.pinnedAreaIds.includes(areaToEdit.id) : false}
+        onTogglePin={areaToEdit ? togglePin : undefined}
       />
 
       {showSettings && (

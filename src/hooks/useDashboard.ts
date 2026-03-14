@@ -15,6 +15,7 @@ export const useDashboard = () => {
       areas: getDefaultAreas(),
       currentAreaId: null,
       breadcrumbs: [],
+      pinnedAreaIds: [],
     }))
   );
 
@@ -213,6 +214,23 @@ export const useDashboard = () => {
       areas: getResetAreas(),
       currentAreaId: null,
       breadcrumbs: [],
+      pinnedAreaIds: [],
+    });
+  }, []);
+
+  const togglePin = useCallback((areaId: string) => {
+    setState(prev => {
+      const has = prev.pinnedAreaIds.includes(areaId);
+      if (has) {
+        return {
+          ...prev,
+          pinnedAreaIds: prev.pinnedAreaIds.filter(id => id !== areaId),
+        };
+      }
+      return {
+        ...prev,
+        pinnedAreaIds: [...prev.pinnedAreaIds, areaId],
+      };
     });
   }, []);
 
@@ -231,5 +249,6 @@ export const useDashboard = () => {
     calculateDomainProgress,
     findArea,
     resetData,
+    togglePin,
   };
 };

@@ -4,12 +4,13 @@ import { getDefaultAreas } from '../config/loadConfig';
 
 const STORAGE_KEY = 'life-dashboard-data';
 
-/** Normalize loaded state: only areas, currentAreaId, breadcrumbs. */
+/** Normalize loaded state: areas, currentAreaId, breadcrumbs, pinnedAreaIds. */
 function normalizeLoadedState(parsed: Partial<DashboardState>): DashboardState {
   return {
     areas: Array.isArray(parsed.areas) ? parsed.areas : getDefaultAreas(),
     currentAreaId: parsed.currentAreaId ?? null,
     breadcrumbs: Array.isArray(parsed.breadcrumbs) ? parsed.breadcrumbs : [],
+    pinnedAreaIds: Array.isArray(parsed.pinnedAreaIds) ? parsed.pinnedAreaIds : [],
   };
 }
 

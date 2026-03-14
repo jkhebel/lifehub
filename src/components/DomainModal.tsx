@@ -21,6 +21,10 @@ export interface DomainModalProps {
   onUpdateDomainMetric?: (domainId: string, metric: DomainMetric | null) => void;
   /** Edit mode: request delete (opens confirmation dialog) */
   onDeleteRequest?: (areaId: string) => void;
+  /** Edit mode: whether this domain is pinned to favorites */
+  isPinned?: boolean;
+  /** Edit mode: toggle pin for this domain */
+  onTogglePin?: (areaId: string) => void;
 }
 
 function MetricFields({
@@ -162,6 +166,8 @@ export function DomainModal({
   onUpdateArea,
   onUpdateDomainMetric,
   onDeleteRequest,
+  isPinned = false,
+  onTogglePin,
 }: DomainModalProps) {
   const isEdit = mode === 'edit';
 
@@ -389,6 +395,20 @@ export function DomainModal({
                   <option key={value} value={value}>{label}</option>
                 ))}
               </select>
+            </div>
+          )}
+
+          {isEdit && area && onTogglePin && (
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="domain-modal-pinned"
+                checked={isPinned}
+                onChange={() => onTogglePin(area.id)}
+              />
+              <label htmlFor="domain-modal-pinned" className="text-sm text-slate-700">
+                Pin to favorites
+              </label>
             </div>
           )}
 
