@@ -222,13 +222,13 @@ A single function **`calculateDomainProgress(domain)`** in the model layer (`src
 
 Behavior is deterministic for the same tree and values. The bullseye and character card both use this single progress value; there is no separate “trackers vs milestones” source.
 
-**Gamification (deferred):** Levels, badges, and XP are not in scope for the current refactor. When re-added, they can be keyed off “binary domain completed” and optional progress/stages thresholds; see PROJECT.md and the roadmap.
+**Gamification:** Optional gamification state (totalXp, completionLog); binary completions award XP; level from total XP. See §5 and the roadmap.
 
 ---
 
-## 5. Gamification (deferred)
+## 5. Gamification
 
-Gamification (XP, badges, avatar, titles) is **deferred** until after the unified domain-metrics refactor and trial usage. The app currently persists `areas`, `currentAreaId`, `breadcrumbs`, and `pinnedAreaIds` (favorite domain ids for quick access). When an area is deleted, its id and all descendant ids are removed from `pinnedAreaIds` so the list stays consistent. When gamification is re-added, it can be keyed off “binary domain completed” and optional progress/stages thresholds; user state for gamification can be reintroduced in a later phase. See PROJECT.md and the roadmap.
+Gamification (XP, level, completion log) is implemented. The app persists optional `gamification` (`totalXp`, `completionLog`). Binary domains set to done add a completion entry and award XP; character level is derived from total XP. The character card shows level and XP bar. When an area is deleted, its id and all descendant ids are removed from `pinnedAreaIds`. Radar: relative view (progress to next level per axis, tier labels) and objective view (absolute %); optional multi-series show multiple polygons and a legend. See PROJECT.md and the roadmap.
 
 ---
 

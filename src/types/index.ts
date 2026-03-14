@@ -16,9 +16,26 @@ export interface StagesMetric {
   type: 'stages';
   currentIndex: number;
   stages: string[];
+  /** Optional numeric bounds per tier; length must be stages.length + 1 (e.g. [0, 1000, 2000, 4000, 6000] for A1/A2/B1/B2). */
+  stageBounds?: number[];
+  /** Raw value when using stageBounds (e.g. vocabulary count); currentIndex derived from which tier contains this value. */
+  currentValue?: number;
 }
 
-export type DomainMetric = BinaryMetric | ProgressMetric | StagesMetric;
+/** Parameter for levels metric: one child domain and numeric bounds per level (length = levels.length + 1). */
+export interface LevelsParameter {
+  childId: string;
+  bounds: number[];
+}
+
+/** Levels metric: named levels and parameters (child ref + bounds). Value per parameter comes from that child's metric. */
+export interface LevelsMetric {
+  type: 'levels';
+  levels: string[];
+  parameters: LevelsParameter[];
+}
+
+export type DomainMetric = BinaryMetric | ProgressMetric | StagesMetric | LevelsMetric;
 
 /** How to aggregate child progress. v1: average or minimum only. */
 export type AggregationMode = 'average' | 'minimum';
@@ -35,6 +52,19 @@ export interface Area {
   metric?: DomainMetric;
   /** How to aggregate child progress when no metric. Default 'average'. */
   aggregation?: AggregationMode;
+  /** Optional game-style stat label (e.g. HP, Charm, Wisdom); shown on character card when set. */
+  statName?: string;
+}
+
+/** One entry per binary domain completion (for XP and badges). */
+export interface CompletionLogEntry {
+  domainId: string;
+  completedAt: string; // ISO date
+}
+
+export interface GamificationState {
+  totalXp: number;
+  completionLog: CompletionLogEntry[];
 }
 
 export interface DashboardState {
@@ -43,6 +73,8 @@ export interface DashboardState {
   breadcrumbs: string[];
   /** Pinned (favorite) domain ids for quick access. Order preserved. */
   pinnedAreaIds: string[];
+  /** XP and completion log; optional for backward compatibility. */
+  gamification?: GamificationState;
 }
 
 export const DEFAULT_COLORS = [

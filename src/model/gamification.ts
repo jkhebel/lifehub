@@ -1,8 +1,45 @@
 import type { Area } from '../types';
+import type { CompletionLogEntry } from '../types';
 
-/** Stub: milestone-based features deferred; no completion log in unified model yet. */
-function getMilestoneCounts(_areas: Area[], _completionLog: unknown[]): { completed: number } {
-  return { completed: 0 };
+/** XP awarded when a binary domain is marked complete (first time). */
+export const XP_PER_BINARY_COMPLETE = 50;
+
+/** XP per level unit (sublinear: level = floor(sqrt(totalXp / XP_PER_LEVEL)) + 1). */
+export const XP_PER_LEVEL = 100;
+
+/**
+ * Character level from total XP (sublinear curve).
+ * Level 1 = 0 XP, Level 2 = 100, Level 3 = 400, Level 4 = 900, ...
+ */
+export function getLevelFromXp(totalXp: number): number {
+  if (totalXp <= 0) return 1;
+  return Math.floor(Math.sqrt(totalXp / XP_PER_LEVEL)) + 1;
+}
+
+/**
+ * XP required to reach a given level (cumulative).
+ * Level 1 = 0, Level 2 = 100, Level 3 = 400, ...
+ */
+export function getXpRequiredForLevel(level: number): number {
+  if (level <= 1) return 0;
+  return (level - 1) ** 2 * XP_PER_LEVEL;
+}
+
+/**
+ * Progress within current level (0–1): how much of the way from current level to next.
+ */
+export function getXpProgressInLevel(totalXp: number): { progress01: number; currentLevel: number; xpInLevel: number; xpNeededForNext: number } {
+  const currentLevel = getLevelFromXp(totalXp);
+  const xpAtLevelStart = getXpRequiredForLevel(currentLevel);
+  const xpNeededForNext = getXpRequiredForLevel(currentLevel + 1) - xpAtLevelStart;
+  const xpInLevel = totalXp - xpAtLevelStart;
+  const progress01 = xpNeededForNext <= 0 ? 1 : Math.min(1, xpInLevel / xpNeededForNext);
+  return { progress01, currentLevel, xpInLevel, xpNeededForNext };
+}
+
+/** Count completions from log (for badges/titles). */
+export function getCompletionCount(completionLog: CompletionLogEntry[]): number {
+  return completionLog.length;
 }
 
 /**
@@ -83,15 +120,18 @@ const MILESTONE_BADGES: { id: string; label: string; minMilestones: number }[] =
   { id: 'ten-milestones', label: 'Ten milestones', minMilestones: 10 },
 ];
 
+function getMilestoneCounts(_areas: Area[], completionLog: CompletionLogEntry[]): { completed: number } {
+  return { completed: completionLog.length };
+}
+
 /**
  * Returns badge ids that are earned by current milestone count (for merging into unlockedBadges).
- * Stub: milestone completion log deferred in unified model.
  */
 export function getEarnedMilestoneBadges(
-  areas: Area[],
-  completionLog: unknown[]
+  _areas: Area[],
+  completionLog: CompletionLogEntry[]
 ): string[] {
-  const { completed } = getMilestoneCounts(areas, completionLog);
+  const { completed } = getMilestoneCounts(_areas, completionLog);
   return MILESTONE_BADGES.filter((b) => completed >= b.minMilestones).map((b) => b.id);
 }
 
@@ -99,7 +139,7 @@ export function getEarnedMilestoneBadges(
 export function getAllEarnedBadgeIds(
   areas: Area[],
   getAreaProgress: (area: Area) => number,
-  completionLog: unknown[]
+  completionLog: CompletionLogEntry[]
 ): string[] {
   const progressBadges = getBadges(areas, getAreaProgress).map((b) => b.id);
   const milestoneBadges = getEarnedMilestoneBadges(areas, completionLog);
@@ -116,7 +156,7 @@ export const TITLE_DEFINITIONS: { id: string; label: string; minMilestones: numb
 
 export function getEarnedTitleIds(
   _areas: Area[],
-  completionLog: unknown[]
+  completionLog: CompletionLogEntry[]
 ): string[] {
   const { completed } = getMilestoneCounts(_areas, completionLog);
   return TITLE_DEFINITIONS.filter((t) => t.id && completed >= t.minMilestones).map((t) => t.id);
@@ -138,7 +178,7 @@ export const AVATAR_DEFINITIONS: AvatarDefinition[] = [
 
 export function getEarnedAvatarIds(
   areas: Area[],
-  completionLog: unknown[]
+  completionLog: CompletionLogEntry[]
 ): string[] {
   const { completed } = getMilestoneCounts(areas, completionLog);
   return AVATAR_DEFINITIONS.filter((a) => (a.minMilestones ?? 0) <= completed).map((a) => a.id);

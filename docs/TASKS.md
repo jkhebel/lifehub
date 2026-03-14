@@ -348,6 +348,50 @@ Out:
 
 **Validation:** Manual: add achievement, complete, check XP and badges; toggle radar view. Unit tests for derived metrics and gamification.
 
+**Note:** T11 is superseded by the unified domain-metrics refactor and Phase 2 roadmap. Implemented instead: gamification state (XP, completion log, level from XP), radar view mode (relative to next level / objective), tiered stages (stageBounds, currentValue), stat names (statName), multi-series radar with legend, pixel/TCG design pass. See roadmap plan and ARCHITECTURE §5.
+
+---
+
+## T12 — Tiered stages and progress-to-next-level (Phase 2a) — Done
+
+Schema: optional `stageBounds` and `currentValue` on StagesMetric. Model: `getProgressToNextLevel(domain)`. Validation for stageBounds length and ascending order.
+
+---
+
+## T13 — Radar view mode and tier labels (Phase 2a) — Done
+
+Radar supports view mode “To next level” (relative) and “Absolute” (objective). Relative view shows progress to next tier and tier label per axis. Toggle in radar section.
+
+---
+
+## T14 — Gamification state and XP (Phase 2b) — Done
+
+GamificationState (totalXp, completionLog); binary domain set to done adds entry and awards XP; level from total XP (sublinear curve). Character card shows level and XP bar.
+
+---
+
+## T15 — Stat names and character card stat block (Phase 2a/c) — Done
+
+Optional `statName` on Area; character card shows stat block (statName or name + progress). Default statName for six OG domains (HP, Charm, Fortune, Renown, Wisdom, Spirit).
+
+---
+
+## T16 — Multi-series radar and legend (Phase 2c) — Done
+
+BullseyeDiagram accepts optional `series` (name + getValue); in objective view multiple polygons and legend when series length > 1.
+
+---
+
+## T17 — Pixel/TCG visual pass (Phase 2c) — Done
+
+Silkscreen font for headings/radar labels; DESIGN.md documents pixel + TCG direction; card-paper and font-pixel applied.
+
+---
+
+## T18 — Progress % from child nodes (roadmap)
+
+Define and implement an equation for computing a parent domain’s progress % from its child nodes (e.g. weighted average, or formula based on child metrics). For use when a parent uses a “Progress”-style metric driven by children. Document in ARCHITECTURE; implement when prioritised.
+
 ---
 
 ## Summary
@@ -364,4 +408,11 @@ Out:
 | T8 | Developer workflow alignment |
 | T9 | Early gamification hooks (Phase 2 prep) |
 | T10 | Config loading and default tree (optional follow-up to T1) |
-| T11 | Achievements, milestones, tasks, and gamification (Phase 2) |
+| T11 | Achievements, milestones, tasks, and gamification (Phase 2) — superseded |
+| T12 | Tiered stages and progress-to-next-level |
+| T13 | Radar view mode and tier labels |
+| T14 | Gamification state and XP |
+| T15 | Stat names and character card stat block |
+| T16 | Multi-series radar and legend |
+| T17 | Pixel/TCG visual pass |
+| T18 | Progress % from child nodes (roadmap) |

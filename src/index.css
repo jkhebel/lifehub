@@ -50,6 +50,11 @@ body::after {
   z-index: 0;
 }
 
+/* Pixel / game-style font for headings and labels */
+.font-pixel {
+  font-family: 'Silkscreen', cursive;
+}
+
 /* Card style: paper + TCG offset shadow */
 @layer components {
   .card-paper {

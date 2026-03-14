@@ -24,7 +24,8 @@ We avoid over-engineering complex game systems before the basic model, visualiza
 | --- | --- | --- |
 | **Phase 1** | MVP: JSON stat-tree, bullseye + card views, local persistence | Done |
 | **Phase 2** | Gamification: levels, badges, milestones/tasks, XP, cosmetics, radar toggle | In progress |
-| **Phase 3+** | Integrations: templates, import/export, optional sync (e.g. Todoist/Google Tasks) | Placeholder |
+| **Phase 3** | Deployment (e.g. Fly.io), authentication, per-user persistence | Placeholder |
+| **Phase 4+** | Integrations: templates, import/export, optional sync (e.g. Todoist/Google Tasks) | Placeholder |
 
 ---
 
@@ -91,7 +92,22 @@ Phase 2 should be guided closely by Architect, UI/UX, and Game Design agents, wi
 
 ---
 
-## Phase 3+ — Integrations and Sharing
+## Phase 3 — Deployment, Auth, and Per-User Persistence
+
+Before or alongside broader integrations, the app can be deployed and given optional user accounts so data is no longer device-bound.
+
+- **Deployment**
+  - Host the static app (e.g. Vite build) on a platform such as [Fly.io](https://fly.io) (or Vercel, Netlify, etc.). Use env-based config for any future API base URLs; no secrets in the repo.
+- **Authentication and user accounts**
+  - Introduce optional sign-in (e.g. email/password or OAuth) so users can identify themselves. Until then, the app remains single-user per browser.
+- **Persistence of JSON (and state) for user accounts**
+  - When a user is signed in, persist dashboard state (areas, gamification, pinnedAreaIds, etc.) to a backend keyed by user id, so the same user sees the same data across devices. Local-only mode remains available when not signed in.
+
+These items should be scoped into concrete tasks in TASKS.md when the team is ready. Security/Privacy review applies to any auth or networked persistence.
+
+---
+
+## Phase 4+ — Integrations and Sharing
 
 Later phases may explore:
 

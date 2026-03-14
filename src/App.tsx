@@ -5,6 +5,7 @@ import {
   DomainModal,
   DomainTree,
   CharacterCard,
+  DataJsonView,
 } from './components';
 import { useDashboard } from './hooks/useDashboard';
 import type { Area } from './types';
@@ -16,6 +17,25 @@ function findAreaById(areas: Area[], id: string): Area | null {
     if (found) return found;
   }
   return null;
+}
+
+/** For radar multi-series: value-based progress (e.g. vocab count / max) when stages have stageBounds and currentValue; else same as calculateProgress. */
+function getValueBasedProgress(
+  area: Area,
+  calculateProgress: (a: Area) => number
+): number {
+  const m = area.metric;
+  if (
+    m?.type === 'stages' &&
+    m.stageBounds?.length &&
+    typeof m.currentValue === 'number'
+  ) {
+    const last = m.stageBounds[m.stageBounds.length - 1];
+    if (last != null && last > 0) {
+      return Math.min(100, (m.currentValue / last) * 100);
+    }
+  }
+  return calculateProgress(area);
 }
 
 function App() {
@@ -32,18 +52,45 @@ function App() {
     deleteArea,
     moveArea,
     calculateDomainProgress,
+    getProgressToNextLevel,
     resetData,
+    replaceState,
     togglePin,
     findArea,
   } = useDashboard();
 
   const [isAddingArea, setIsAddingArea] = useState(false);
+  const [radarViewMode, setRadarViewMode] = useState<'relative' | 'objective'>('relative');
   const [areaToEdit, setAreaToEdit] = useState<Area | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [showJsonView, setShowJsonView] = useState(false);
   const [areaToDeleteId, setAreaToDeleteId] = useState<string | null>(null);
 
   const breadcrumbs = getBreadcrumbAreas();
   const isDomainModalOpen = isAddingArea || areaToEdit != null;
+
+  const radarAreas =
+    displayAreas.length > 0
+      ? displayAreas
+      : currentArea
+        ? [currentArea]
+        : [];
+  const hasStagesWithBounds = radarAreas.some(
+    (a) =>
+      a.metric?.type === 'stages' &&
+      a.metric.stageBounds?.length &&
+      typeof a.metric.currentValue === 'number'
+  );
+  const radarSeries =
+    radarViewMode === 'objective' && hasStagesWithBounds
+      ? [
+          { name: 'Level', getValue: (a: Area) => calculateDomainProgress(a) },
+          {
+            name: 'Value',
+            getValue: (a: Area) => getValueBasedProgress(a, calculateDomainProgress),
+          },
+        ]
+      : [];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-sky-50 via-amber-50 to-pink-50 text-slate-900">
@@ -51,7 +98,7 @@ function App() {
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <h1 className="text-xl font-extrabold tracking-tight bg-gradient-to-r from-sky-500 via-emerald-500 to-amber-500 bg-clip-text text-transparent">
+              <h1 className="text-xl font-extrabold tracking-tight font-pixel bg-gradient-to-r from-sky-500 via-emerald-500 to-amber-500 bg-clip-text text-transparent">
                 Life Dashboard
               </h1>
               {breadcrumbs.length > 0 && (
@@ -98,6 +145,16 @@ function App() {
           <div className="space-y-3">
             <button
               onClick={() => {
+                setShowSettings(false);
+                setShowJsonView(true);
+              }}
+              className="w-full text-left px-3 py-2 text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-[6px] border border-slate-200 transition-colors text-sm"
+              type="button"
+            >
+              Edit data as JSON
+            </button>
+            <button
+              onClick={() => {
                 if (confirm('Reset all domains to the built-in defaults? This cannot be undone.')) {
                   resetData();
                 }
@@ -121,9 +178,27 @@ function App() {
             aria-label="Radar chart overview"
             className="lg:col-span-7 flex flex-col items-center order-1"
           >
-            <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3 self-start">
-              Radar
-            </h2>
+            <div className="flex items-center justify-between gap-4 mb-3 self-start w-full">
+              <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wider">
+                Radar
+              </h2>
+              <div className="flex rounded-md border border-slate-200 bg-slate-50 p-0.5" role="group" aria-label="Radar view mode">
+                <button
+                  type="button"
+                  onClick={() => setRadarViewMode('relative')}
+                  className={`px-2 py-1 text-xs font-medium rounded transition-colors ${radarViewMode === 'relative' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                  To next level
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRadarViewMode('objective')}
+                  className={`px-2 py-1 text-xs font-medium rounded transition-colors ${radarViewMode === 'objective' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                  Absolute
+                </button>
+              </div>
+            </div>
             {currentArea && (
               <div className="mb-4 text-center">
                 <h2 className="text-2xl font-extrabold flex items-center justify-center gap-2 tracking-tight">
@@ -136,16 +211,18 @@ function App() {
               </div>
             )}
 
+            <p className="text-slate-500 text-xs mb-2 self-start">
+              {radarViewMode === 'relative'
+                ? 'To next level: progress within current tier (e.g. A1→A2). Labels show tier.'
+                : 'Absolute: overall 0–100% progress. With tier bounds, two polygons show Level vs Value.'}
+            </p>
             <BullseyeDiagram
-              areas={
-                displayAreas.length > 0
-                  ? displayAreas
-                  : currentArea
-                    ? [currentArea]
-                    : []
-              }
+              areas={radarAreas}
               onAreaClick={(areaId) => navigateToArea(areaId)}
               calculateProgress={calculateDomainProgress}
+              getProgressToNextLevel={getProgressToNextLevel}
+              viewMode={radarViewMode}
+              series={radarSeries}
               centerLabel={currentArea?.name || 'Life'}
               onCenterClick={currentArea ? navigateUp : undefined}
             />
@@ -169,6 +246,7 @@ function App() {
             <CharacterCard
               areas={state.areas}
               calculateProgress={calculateDomainProgress}
+              gamification={state.gamification}
             >
               {state.pinnedAreaIds.length > 0 && (
                 <div className="mb-3 pb-3 border-b border-indigo-100">
@@ -263,6 +341,14 @@ function App() {
         isPinned={areaToEdit ? state.pinnedAreaIds.includes(areaToEdit.id) : false}
         onTogglePin={areaToEdit ? togglePin : undefined}
       />
+
+      {showJsonView && (
+        <DataJsonView
+          state={state}
+          onApply={replaceState}
+          onClose={() => setShowJsonView(false)}
+        />
+      )}
 
       {showSettings && (
         <div

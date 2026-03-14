@@ -130,4 +130,94 @@ describe('validateAreas', () => {
     const result = validateAreas(bad);
     expect(result.ok).toBe(false);
   });
+
+  it('accepts area with statName', () => {
+    const tree = [
+      { id: 'health', name: 'Health', color: '#22c55e', parentId: null, children: [], statName: 'HP' },
+    ];
+    const result = validateAreas(tree);
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.data[0].statName).toBe('HP');
+  });
+
+  it('accepts stages metric with stageBounds and currentValue', () => {
+    const tree = [
+      {
+        id: 'lang',
+        name: 'Japanese',
+        color: '#333',
+        parentId: null,
+        children: [],
+        metric: {
+          type: 'stages',
+          currentIndex: 0,
+          stages: ['A1', 'A2', 'B1', 'B2'],
+          stageBounds: [0, 1000, 2000, 4000, 6000],
+          currentValue: 500,
+        },
+      },
+    ];
+    const result = validateAreas(tree);
+    expect(result.ok).toBe(true);
+  });
+
+  it('rejects stages metric with stageBounds wrong length', () => {
+    const bad = [
+      {
+        id: 'a',
+        name: 'A',
+        color: '#333',
+        parentId: null,
+        children: [],
+        metric: { type: 'stages', currentIndex: 0, stages: ['A1', 'A2'], stageBounds: [0, 1000] },
+      },
+    ];
+    const result = validateAreas(bad);
+    expect(result.ok).toBe(false);
+  });
+
+  it('rejects statName when not a string', () => {
+    const bad = [
+      { id: 'a', name: 'A', color: '#333', parentId: null, children: [], statName: 123 },
+    ];
+    const result = validateAreas(bad);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.errors.some((e) => e.includes('statName'))).toBe(true);
+  });
+
+  it('accepts valid levels metric', () => {
+    const root = [
+      {
+        id: 'p',
+        name: 'P',
+        color: '#333',
+        parentId: null,
+        children: [
+          { id: 'c', name: 'C', color: '#333', parentId: 'p', children: [] },
+        ],
+        metric: {
+          type: 'levels',
+          levels: ['A1', 'A2', 'B1'],
+          parameters: [{ childId: 'c', bounds: [0, 1000, 2000, 4000] }],
+        },
+      },
+    ];
+    const result = validateAreas(root);
+    expect(result.ok).toBe(true);
+  });
+
+  it('rejects levels metric with wrong bounds length', () => {
+    const bad = [
+      {
+        id: 'p',
+        name: 'P',
+        color: '#333',
+        parentId: null,
+        children: [],
+        metric: { type: 'levels', levels: ['A1', 'A2'], parameters: [{ childId: 'x', bounds: [0, 1] }] },
+      },
+    ];
+    const result = validateAreas(bad);
+    expect(result.ok).toBe(false);
+  });
 });

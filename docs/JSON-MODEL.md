@@ -30,6 +30,7 @@ The same tree drives navigation, derived metrics, bullseye visualization, and ch
 | `parentId` | string \| null | Yes | Parent area id; `null` for root areas. |
 | `metric` | DomainMetric | No | How this node is measured; if absent, progress is derived from children (or 0 if leaf). |
 | `aggregation` | string | No | `"average"` \| `"minimum"`; used when no metric and node has children. Default `"average"`. |
+| `statName` | string | No | Game-style stat label (e.g. HP, Charm, Wisdom); shown on character card when set. |
 
 **Legacy (invalid for clean-slate):** Areas must **not** have `trackers` or `achievements`. Configs that contain them fail validation and the app falls back to the default six domains.
 
@@ -64,9 +65,11 @@ Progress = `min(100, (current / max) * 100)`.
 | --- | --- | --- | --- |
 | `type` | `"stages"` | Yes | |
 | `currentIndex` | number | Yes | Index into `stages` (0-based). |
-| `stages` | string[] | Yes | Ordered list of stage names (e.g. N5, N4, N3, N2, N1). |
+| `stages` | string[] | Yes | Ordered list of stage names (e.g. A1, A2, B1, B2). |
+| `stageBounds` | number[] | No | Numeric bounds per tier; length must be `stages.length + 1` (e.g. [0, 1000, 2000, 4000, 6000] for word-count tiers). |
+| `currentValue` | number | No | Raw value when using `stageBounds` (e.g. vocabulary count); tier is derived from which range contains this value. |
 
-Progress: if `stages.length <= 1`, 100% when `currentIndex === 0` else 0%; else `(currentIndex / (stages.length - 1)) * 100`.
+Progress: if `stageBounds` and `currentValue` are set, progress within current tier toward next; else if `stages.length <= 1`, 100% when `currentIndex === 0` else 0%; else `(currentIndex / (stages.length - 1)) * 100`.
 
 ---
 
@@ -121,7 +124,8 @@ A validation function for raw JSON configs should:
 - Accept a JSON value that is an **array of objects** (root areas).
 - For each area: require `id` (string), `name` (string), `color` (string), `children` (array), `parentId` (string or null).
 - Forbid `trackers` and `achievements` on any area (old shape → validation fails; loader uses default).
-- If `metric` is present: validate by type — binary: `value` 0 or 1; progress: `current` and `max` numbers; stages: `currentIndex` number, `stages` non-empty array of strings.
+- If `metric` is present: validate by type — binary: `value` 0 or 1; progress: `current` and `max` numbers; stages: `currentIndex` number, `stages` non-empty array of strings; if `stageBounds` present, length must be `stages.length + 1` and ascending; if `currentValue` present, must be number.
+- If `statName` present, must be string.
 - Recursively validate children.
 - Optionally: default `aggregation` to `"average"` when absent and allow only `"average"` or `"minimum"`.
 
@@ -137,7 +141,8 @@ Dashboard state persisted to localStorage includes:
 - `currentAreaId` — selected domain id or null.
 - `breadcrumbs` — array of area ids for navigation path.
 - `pinnedAreaIds` — array of domain ids pinned as favorites for quick access (order preserved).
+- `gamification` — when present: `totalXp` (number) and `completionLog` (array of `{ domainId, completedAt }`).
 
 When an area is deleted, its id and all descendant ids are removed from `pinnedAreaIds` so the list does not retain stale references.
 
-Gamification (XP, badges, completion log) is deferred; when re-added, it can be keyed off “binary domain completed” and optional progress/stages thresholds.
+Gamification is implemented (XP from binary completions; level from total XP).

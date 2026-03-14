@@ -25,6 +25,7 @@ export function getResetAreas(): Area[] {
       parentId: null,
       children: [],
       aggregation: 'average',
+      statName: 'HP',
     },
     {
       id: RESET_AREA_IDS.career,
@@ -35,6 +36,7 @@ export function getResetAreas(): Area[] {
       parentId: null,
       children: [],
       aggregation: 'average',
+      statName: 'Renown',
     },
     {
       id: RESET_AREA_IDS.finances,
@@ -45,6 +47,7 @@ export function getResetAreas(): Area[] {
       parentId: null,
       children: [],
       aggregation: 'average',
+      statName: 'Fortune',
     },
     {
       id: RESET_AREA_IDS.relationships,
@@ -55,6 +58,7 @@ export function getResetAreas(): Area[] {
       parentId: null,
       children: [],
       aggregation: 'average',
+      statName: 'Charm',
     },
     {
       id: RESET_AREA_IDS.growth,
@@ -65,6 +69,7 @@ export function getResetAreas(): Area[] {
       parentId: null,
       children: [],
       aggregation: 'average',
+      statName: 'Wisdom',
     },
     {
       id: RESET_AREA_IDS.recreation,
@@ -75,6 +80,7 @@ export function getResetAreas(): Area[] {
       parentId: null,
       children: [],
       aggregation: 'average',
+      statName: 'Spirit',
     },
   ];
 }
