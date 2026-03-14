@@ -89,6 +89,8 @@ The app is a static Vite build served with nginx (SPA fallback). From the repo r
 
 Build uses the multi-stage `Dockerfile` (node build, then nginx serve). SPA routing: refresh on any path returns `index.html`.
 
+**Auto-deploy:** Pushing to `main` or `alpha` triggers a GitHub Actions deploy (see `.github/workflows/fly-deploy.yml`). Ensure `FLY_API_TOKEN` is set in the repo secrets. Merge to `alpha` for preview deploys; merge to `main` for production.
+
 ## Workflow (branching & PRs)
 
 ### Branch naming (required)

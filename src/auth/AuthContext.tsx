@@ -12,6 +12,7 @@ import {
   getSession,
   onAuthStateChange,
   signInWithPassword as supabaseSignIn,
+  signUp as supabaseSignUp,
   signOut as supabaseSignOut,
 } from './supabase';
 
@@ -20,6 +21,7 @@ interface AuthContextValue {
   loading: boolean;
   isAuthEnabled: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
+  signUp: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
 }
 
@@ -36,12 +38,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
     let cancelled = false;
-    getSession().then(({ data: { session } }) => {
-      if (!cancelled) {
-        setUser(session?.user ?? null);
-        setLoading(false);
-      }
-    });
+    getSession()
+      .then(({ data: { session } }) => {
+        if (!cancelled) {
+          setUser(session?.user ?? null);
+          setLoading(false);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setUser(null);
+          setLoading(false);
+        }
+      });
     const { data: { subscription } } = onAuthStateChange((_event, session) => {
       if (!cancelled) setUser(session?.user ?? null);
     });
@@ -54,6 +63,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signIn = useCallback(async (email: string, password: string) => {
     try {
       const { error } = await supabaseSignIn(email, password);
+      return { error: error ? new Error(error.message) : null };
+    } catch (e) {
+      return { error: e instanceof Error ? e : new Error(String(e)) };
+    }
+  }, []);
+
+  const signUp = useCallback(async (email: string, password: string) => {
+    try {
+      const { error } = await supabaseSignUp(email, password);
       return { error: error ? new Error(error.message) : null };
     } catch (e) {
       return { error: e instanceof Error ? e : new Error(String(e)) };
@@ -73,6 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     loading,
     isAuthEnabled: enabled,
     signIn,
+    signUp,
     signOut,
   };
 
@@ -91,6 +110,7 @@ export function useAuth(): AuthContextValue {
       loading: false,
       isAuthEnabled: false,
       signIn: async () => ({ error: new Error('Auth not available') }),
+      signUp: async () => ({ error: new Error('Auth not available') }),
       signOut: async () => {},
     };
   }

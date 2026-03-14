@@ -7,7 +7,9 @@ import {
   CharacterCard,
   DataJsonView,
   AuthBar,
+  Landing,
 } from './components';
+import { useAuth } from './auth/AuthContext';
 import { useDashboard } from './hooks/useDashboard';
 import type { Area } from './types';
 
@@ -40,6 +42,7 @@ function getValueBasedProgress(
 }
 
 function App() {
+  const { isAuthEnabled, loading: authLoading, user } = useAuth();
   const {
     state,
     currentArea,
@@ -66,6 +69,10 @@ function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [showJsonView, setShowJsonView] = useState(false);
   const [areaToDeleteId, setAreaToDeleteId] = useState<string | null>(null);
+
+  if (isAuthEnabled && !authLoading && !user) {
+    return <Landing />;
+  }
 
   const breadcrumbs = getBreadcrumbAreas();
   const isDomainModalOpen = isAddingArea || areaToEdit != null;
@@ -144,7 +151,7 @@ function App() {
         >
           <h3 className="font-medium mb-2">Settings</h3>
           <p className="text-slate-500 text-xs mb-4">
-            Changes affect only this browser.
+            {user ? 'Changes sync to your account.' : 'Changes affect only this browser.'}
           </p>
           <div className="space-y-3">
             <button
@@ -170,7 +177,9 @@ function App() {
               Reset to defaults
             </button>
             <p className="text-slate-500 text-xs">
-              Your data is stored locally in this browser only.
+              {user
+                ? 'Your data is synced to your account and available on any device where you sign in.'
+                : 'Your data is stored locally in this browser only.'}
             </p>
           </div>
         </div>

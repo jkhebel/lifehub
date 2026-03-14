@@ -1,18 +1,23 @@
-# Fly.io app config for Life Dashboard (static Vite build).
-# Deploy: fly deploy
-# Set secrets for production: fly secrets set VITE_SUPABASE_URL=... VITE_SUPABASE_ANON_KEY=...
+# fly.toml app configuration file generated for life-dashboard-floral-paper-5675 on 2026-03-14T13:03:15-07:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
 
-app = "life-dashboard"
+app = 'life-dashboard-floral-paper-5675'
+primary_region = 'lax'
+
+[build]
 
 [http_service]
   internal_port = 80
   force_https = true
-  auto_stop_machines = true
+  auto_stop_machines = 'stop'
   auto_start_machines = true
   min_machines_running = 0
-  processes = ["app"]
+  processes = ['app']
 
 [[vm]]
-  memory = "256mb"
-  cpu_kind = "shared"
+  memory = '256mb'
+  cpu_kind = 'shared'
   cpus = 1
+  memory_mb = 256
