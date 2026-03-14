@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { Area, Achievement, AchievementKind } from '../types';
 
+/** Milestones-only: only milestone and project (container) are offered in the UI. */
 const ACHIEVEMENT_KINDS: { value: AchievementKind; label: string }[] = [
   { value: 'milestone', label: 'Milestone' },
-  { value: 'task', label: 'Task' },
   { value: 'project', label: 'Project' },
 ];
 
@@ -22,14 +22,14 @@ function AddAchievementModal({
 }: AddAchievementModalProps) {
   const [name, setName] = useState('');
   const [kind, setKind] = useState<AchievementKind>('milestone');
-  const [xpReward, setXpReward] = useState('10');
+  const [xpReward, setXpReward] = useState('50');
 
   if (!isOpen) return null;
 
   const handleSubmit = () => {
     const trimmed = name.trim();
     if (!trimmed) return;
-    const xp = kind === 'task' ? 10 : kind === 'milestone' ? 50 : 0;
+    const xp = kind === 'milestone' ? 50 : 0;
     onAdd({
       name: trimmed,
       kind,
@@ -38,7 +38,7 @@ function AddAchievementModal({
     });
     setName('');
     setKind('milestone');
-    setXpReward('10');
+    setXpReward('50');
     onClose();
   };
 
@@ -47,14 +47,14 @@ function AddAchievementModal({
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
       role="dialog"
       aria-modal="true"
-      aria-label="Add achievement"
+      aria-label="Add milestone"
       onClick={onClose}
     >
       <div
         className="bg-white rounded-xl p-5 w-full max-w-sm border-2 border-slate-200 shadow-lg"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-lg font-semibold text-slate-900 mb-3">Add achievement</h2>
+        <h2 className="text-lg font-semibold text-slate-900 mb-3">Add milestone</h2>
         <div className="space-y-3">
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Name</label>
@@ -124,9 +124,8 @@ interface AchievementsPanelProps {
   area: Area | null;
   onAddAchievement: (areaId: string, achievement: Omit<Achievement, 'id'>) => void;
   onCompleteAchievement: (achievementId: string, areaId: string, xpReward?: number) => void;
-  getCompletionCount: (achievementId: string) => number;
   isAchievementCompleted: (achievementId: string) => boolean;
-  /** Optional: show a short XP toast (e.g. "+10 XP") after completion */
+  /** Optional: show a short XP toast after claiming a milestone */
   onXpGained?: (amount: number) => void;
 }
 
@@ -135,7 +134,6 @@ function AchievementRow({
   areaId,
   areaColor,
   onComplete,
-  getCompletionCount,
   isCompleted,
   onXpGained,
 }: {
@@ -143,12 +141,10 @@ function AchievementRow({
   areaId: string;
   areaColor: string;
   onComplete: (achievementId: string, areaId: string, xpReward?: number) => void;
-  getCompletionCount: (id: string) => number;
   isCompleted: (id: string) => boolean;
   onXpGained?: (amount: number) => void;
 }) {
   const completed = isCompleted(achievement.id);
-  const count = getCompletionCount(achievement.id);
   const xp = achievement.xpReward ?? 0;
 
   if (achievement.kind === 'project') {
@@ -160,18 +156,19 @@ function AchievementRow({
         </div>
         {achievement.children && achievement.children.length > 0 && (
           <div className="mt-2 pl-4 space-y-2 border-l-2 border-slate-200">
-            {achievement.children.map((child) => (
-              <AchievementRow
-                key={child.id}
-                achievement={child}
-                areaId={areaId}
-                areaColor={areaColor}
-                onComplete={onComplete}
-                getCompletionCount={getCompletionCount}
-                isCompleted={isCompleted}
-                onXpGained={onXpGained}
-              />
-            ))}
+            {achievement.children
+              .filter((child) => child.kind === 'milestone')
+              .map((child) => (
+                <AchievementRow
+                  key={child.id}
+                  achievement={child}
+                  areaId={areaId}
+                  areaColor={areaColor}
+                  onComplete={onComplete}
+                  isCompleted={isCompleted}
+                  onXpGained={onXpGained}
+                />
+              ))}
           </div>
         )}
       </div>
@@ -183,55 +180,33 @@ function AchievementRow({
     if (xp > 0 && onXpGained) onXpGained(xp);
   };
 
+  // Milestones-only: only milestones have Claim/Claimed (tasks are hidden in the UI)
   return (
     <div
       className={`flex items-center justify-between gap-3 py-2 px-3 rounded-lg border transition-colors ${
-        completed && achievement.kind === 'milestone'
-          ? 'bg-emerald-50 border-emerald-200'
-          : 'bg-white border-slate-200 hover:border-slate-300'
+        completed ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-slate-200 hover:border-slate-300'
       }`}
     >
       <div className="min-w-0 flex-1 flex items-center gap-2">
-        {achievement.kind === 'milestone' ? (
-          <span className="text-amber-500 shrink-0" aria-hidden>🎯</span>
-        ) : (
-          <span className="text-sky-500 shrink-0" aria-hidden>✓</span>
-        )}
-        <span className={completed && achievement.kind === 'milestone' ? 'text-slate-500 line-through' : ''}>
+        <span className="text-amber-500 shrink-0" aria-hidden>🎯</span>
+        <span className={completed ? 'text-slate-500 line-through' : ''}>
           {achievement.name}
         </span>
-        {achievement.kind === 'task' && count > 0 && (
-          <span className="text-slate-400 text-sm">×{count}</span>
-        )}
         {xp > 0 && (
           <span className="text-slate-400 text-xs">+{xp} XP</span>
         )}
       </div>
       <div className="shrink-0">
-        {achievement.kind === 'milestone' ? (
-          completed ? (
-            <span className="text-emerald-600 text-sm font-medium">Claimed</span>
-          ) : (
-            <button
-              type="button"
-              onClick={handleComplete}
-              className="px-3 py-1 text-sm rounded-lg font-medium text-white transition-colors"
-              style={{ backgroundColor: areaColor }}
-            >
-              Claim
-            </button>
-          )
+        {completed ? (
+          <span className="text-emerald-600 text-sm font-medium">Claimed</span>
         ) : (
           <button
             type="button"
             onClick={handleComplete}
-            className="p-2 rounded-lg border-2 border-slate-300 hover:border-emerald-400 hover:bg-emerald-50 text-slate-400 hover:text-emerald-600 transition-colors"
-            title="Mark done (grants XP)"
-            aria-label={`Complete ${achievement.name}`}
+            className="px-3 py-1 text-sm rounded-lg font-medium text-white transition-colors"
+            style={{ backgroundColor: areaColor }}
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
+            Claim
           </button>
         )}
       </div>
@@ -243,7 +218,6 @@ export const AchievementsPanel = ({
   area,
   onAddAchievement,
   onCompleteAchievement,
-  getCompletionCount,
   isAchievementCompleted,
   onXpGained,
 }: AchievementsPanelProps) => {
@@ -257,7 +231,7 @@ export const AchievementsPanel = ({
     <div className="bg-white/95 rounded-[10px] border-2 border-slate-300 border-t-slate-200 border-l-slate-200 overflow-hidden card-paper">
       <div className="p-4 border-b border-slate-200" style={{ backgroundColor: `${area.color}12` }}>
         <div className="flex items-center justify-between">
-          <h4 className="text-sm font-medium text-slate-700">Milestones & tasks</h4>
+          <h4 className="text-sm font-medium text-slate-700">Milestones</h4>
           <button
             type="button"
             onClick={() => setIsAdding(true)}
@@ -266,35 +240,36 @@ export const AchievementsPanel = ({
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
-            Add
+            Add milestone
           </button>
         </div>
       </div>
       <div className="p-4">
         {achievements.length === 0 ? (
           <div className="text-center py-6 text-slate-500">
-            <p className="mb-2">No milestones or tasks yet</p>
+            <p className="mb-2">No milestones yet</p>
             <p className="text-sm mb-3">
-              Add one-time milestones (e.g. &quot;Reached B2 in French&quot;) or repeatable tasks (e.g. &quot;Gym today&quot;) to track and earn XP.
+              Add one-time milestones (e.g. &quot;Reached B2 in French&quot;, &quot;I can do the splits&quot;) to track progress and earn XP when you claim them.
             </p>
             <button
               type="button"
               onClick={() => setIsAdding(true)}
               className="text-sky-600 hover:text-sky-700 text-sm font-medium"
             >
-              Add your first achievement
+              Add your first milestone
             </button>
           </div>
         ) : (
           <div className="space-y-2">
-            {achievements.map((achievement) => (
+            {achievements
+              .filter((a) => a.kind === 'milestone' || a.kind === 'project')
+              .map((achievement) => (
               <AchievementRow
                 key={achievement.id}
                 achievement={achievement}
                 areaId={area.id}
                 areaColor={area.color}
                 onComplete={onCompleteAchievement}
-                getCompletionCount={getCompletionCount}
                 isCompleted={isAchievementCompleted}
                 onXpGained={onXpGained}
               />

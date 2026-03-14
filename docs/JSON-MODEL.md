@@ -121,7 +121,7 @@ Configs can come from a **bundled default** (e.g. shipped with the app) or **use
 
 ## 6. Achievement (milestones, tasks, projects)
 
-Each **Area** may have an optional `achievements` array. An **Achievement** represents a milestone (one-time), task (repeatable), or project (container).
+Each **Area** may have an optional `achievements` array. An **Achievement** represents a milestone (one-time), task (repeatable), or project (container). **Current UI focus:** milestones only; the app exposes “Add milestone” and “Project” (as a container for milestones). Task tracking is supported in the schema but not yet in the UI.
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |

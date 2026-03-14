@@ -37,7 +37,6 @@ function App() {
     deleteTracker,
     addAchievement,
     completeAchievement,
-    getCompletionCount,
     isAchievementCompleted,
     setSelectedAvatar,
     setSelectedTitle,
@@ -239,7 +238,7 @@ function App() {
               </p>
               {radarView === 'milestones' && (
                 <p className="text-slate-400 text-xs">
-                  Add milestones in each domain (Milestones & tasks panel) to see progress here.
+                  Add milestones in each domain (Milestones panel) to see progress here.
                 </p>
               )}
             </div>
@@ -302,17 +301,16 @@ function App() {
             />
           </section>
           <section
-            aria-label="Milestones and tasks"
+            aria-label="Milestones"
             className="lg:col-span-5"
           >
             <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">
-              Milestones & tasks
+              Milestones
             </h2>
             <AchievementsPanel
               area={currentArea}
               onAddAchievement={addAchievement}
               onCompleteAchievement={completeAchievement}
-              getCompletionCount={getCompletionCount}
               isAchievementCompleted={isAchievementCompleted}
               onXpGained={handleXpGained}
             />
