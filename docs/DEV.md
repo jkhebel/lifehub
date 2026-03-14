@@ -85,11 +85,14 @@ The app is a static Vite build served with nginx (SPA fallback). From the repo r
 1. Install [Fly CLI](https://fly.io/docs/hands-on/install-flyctl/) and log in: `fly auth login`.
 2. Launch the app (first time): `fly launch --no-deploy` to create the app and `fly.toml`; answer prompts or keep defaults.
 3. Deploy: `fly deploy`.
-4. For production auth/sync, set secrets (not in repo): `fly secrets set VITE_SUPABASE_URL=https://xxx.supabase.co VITE_SUPABASE_ANON_KEY=your-anon-key`.
+4. **Login page on the deployed app:** Vite bakes `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` into the bundle at **build time** (they are not runtime env). So:
+   - **Manual deploy:** Pass them as build args:
+     `fly deploy --build-arg VITE_SUPABASE_URL=https://xxx.supabase.co --build-arg VITE_SUPABASE_ANON_KEY=your-anon-key`
+   - **Auto-deploy (GitHub Actions):** In the repo’s GitHub Settings → Secrets and variables → Actions, add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`. The workflow passes them into the Docker build. Without these, the deployed app has no login (local-only mode).
 
 Build uses the multi-stage `Dockerfile` (node build, then nginx serve). SPA routing: refresh on any path returns `index.html`.
 
-**Auto-deploy:** Pushing to `main` or `alpha` triggers a GitHub Actions deploy (see `.github/workflows/fly-deploy.yml`). Ensure `FLY_API_TOKEN` is set in the repo secrets. Merge to `alpha` for preview deploys; merge to `main` for production.
+**Auto-deploy:** Pushing to `main` or `alpha` triggers a GitHub Actions deploy (see `.github/workflows/fly-deploy.yml`). Set `FLY_API_TOKEN` in repo secrets. For the login page, also set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in repo secrets. Merge to `alpha` for preview deploys; merge to `main` for production.
 
 ## Workflow (branching & PRs)
 
