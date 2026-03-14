@@ -142,6 +142,12 @@ export const useDashboard = () => {
     }));
   }, []);
 
+  const subtreeIds = useCallback((area: Area): Set<string> => {
+    const ids = new Set<string>([area.id]);
+    area.children.forEach(c => subtreeIds(c).forEach(id => ids.add(id)));
+    return ids;
+  }, []);
+
   const deleteArea = useCallback((areaId: string) => {
     const removeArea = (areas: Area[]): Area[] => {
       return areas
@@ -149,21 +155,18 @@ export const useDashboard = () => {
         .map(a => ({ ...a, children: removeArea(a.children) }));
     };
     setState(prev => {
+      const area = findArea(prev.areas, areaId);
+      const idsToRemove = area ? subtreeIds(area) : new Set<string>([areaId]);
       const isCurrentOrDescendant = prev.currentAreaId === areaId || prev.breadcrumbs.includes(areaId);
       return {
         ...prev,
         areas: removeArea(prev.areas),
         currentAreaId: isCurrentOrDescendant ? null : prev.currentAreaId,
         breadcrumbs: isCurrentOrDescendant ? [] : prev.breadcrumbs,
+        pinnedAreaIds: prev.pinnedAreaIds.filter(id => !idsToRemove.has(id)),
       };
     });
-  }, []);
-
-  const subtreeIds = useCallback((area: Area): Set<string> => {
-    const ids = new Set<string>([area.id]);
-    area.children.forEach(c => subtreeIds(c).forEach(id => ids.add(id)));
-    return ids;
-  }, []);
+  }, [findArea, subtreeIds]);
 
   const moveArea = useCallback((areaId: string, newParentId: string | null, index?: number) => {
     setState(prev => {

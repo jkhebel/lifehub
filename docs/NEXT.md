@@ -5,42 +5,27 @@ This doc orients new contributors and agents on the current phase and the immedi
 ## Current state
 
 - **Compass:** `docs/PROJECT.md` defines the Life Dashboard concept: nested domains, bullseye diagrams, character-sheet metaphor, JSON stat tree, and gamification philosophy. Treat it as the domain-of-truth compass.
-- **Architecture:** `docs/ARCHITECTURE.md` describes the React/Vite/Tailwind app structure, JSON model/persistence/visualization pipeline, and the intended repo layout (promoting `life-dashboard/` to root and removing the empty root `src/`).
-- **Plan and tasks:** `docs/PLAN.md` outlines phases; `docs/TASKS.md` breaks Phase 1 into concrete tasks T1–T10.
-- **Agents:** `AGENTS.md` and the playbooks in `agents/` (to be updated) define roles for Architect, Lead, UI/UX, Game Design, Test, Docs, Refactor, and Security/Privacy.
+- **Architecture:** `docs/ARCHITECTURE.md` describes the React/Vite/Tailwind app structure, JSON model (Area + optional DomainMetric), persistence, and presentation (DomainTree, DomainModal, CharacterCard, BullseyeDiagram). The app lives at repo root with `src/` at the root.
+- **Plan and tasks:** `docs/PLAN.md` outlines phases (Phase 1 MVP done; Phase 2 gamification in progress). `docs/TASKS.md` lists tasks T1–T11.
+- **Agents:** `AGENTS.md` and playbooks in `agents/` define roles for Architect, Lead, UI/UX, Game Design, Test, Docs, Refactor, and Security/Privacy.
+
+## Implemented (Phase 1 + UI reconfig)
+
+- **Unified domain metrics:** Single tree of areas with optional metric per node (binary, progress, stages). Progress derived from metric or by aggregating children (average/minimum). No trackers or achievements; clean-slate persistence.
+- **UI:** Single grid (radar + character card). No bottom domain panel. Domain tree shows inline metric summary and progress; double-click opens **DomainModal** (add/edit: name, emoji, color, metric, pin to favorites, delete). Drag-and-drop: reorder siblings or move to another parent. **Pinned** section above the tree for favorite domains; pin/unpin in the domain edit modal. When an area is deleted, its id and descendants are removed from `pinnedAreaIds`.
 
 ## Immediate focus
 
-**Goal:** Deliver the Phase 1 MVP so a user can define a JSON stat tree, see it rendered in bullseye and card views, and have changes persist locally.
+**Goal:** Phase 2 gamification (levels, badges, XP, cosmetics) and UX polish, within the guardrails of `docs/PROJECT.md`.
 
 **Lead (with Test/Docs/UI) should:**
 
-1. **Stabilize the JSON model and derived metrics**
-   - Implement T1 (JSON stat-tree types/validation) and T2 (derived metrics).
-2. **Wire persistence and basic UI flows**
-   - Implement T3 (local persistence) and T4 (domain tree navigation UI).
-3. **Make the main visual surfaces real**
-   - Implement T5 (bullseye visualization) and T6 (character card view).
-4. **Enable basic editing**
-   - Implement T7 (editing flows for stats) so changes flow through model → persistence → visuals.
+- Advance T11 (achievements, milestones, XP, badges) and any follow-up tasks from the Architect.
+- Keep docs and tests aligned with the current schema and behavior.
 
-In parallel, **Docs** should keep `docs/DEV.md` and any README/usage notes aligned with actual dev commands (T8), and **Architect + Game Design** can begin sketching concrete rules for levels/badges (T9), keeping within the guardrails of `docs/PROJECT.md`.
+**Docs** should keep `docs/` accurate; **Architect + Game Design** define concrete rules for levels/badges per PROJECT.md.
 
-## Repo layout change (upcoming)
+## After Phase 2
 
-A **small, isolated change** (can be scheduled without blocking Phase 1 feature work):
-
-- Move the contents of `life-dashboard/` to the repo root.
-- Remove the now-empty root `src/` directory (if present).
-
-After this, paths in docs and tasks should assume a **root-level Vite app** with `src/` at the repo root. See [ARCHITECTURE.md](ARCHITECTURE.md) §1 and [DEV.md](DEV.md) for current vs intended commands.
-
-## After Phase 1
-
-When the MVP criteria in `docs/PLAN.md` are met, the next phase focuses on:
-
-- Refining gamification (levels, badges, mastery) with healthy guardrails.
-- Polishing UX and accessibility.
-- Exploring import/export and templates for different life ontologies.
-
-Architect, UI/UX, and Game Design agents should propose updated tasks and possible new documents (e.g. a lightweight `DESIGN.md` for JSON schema details) before deeper feature work proceeds.
+- Import/export and templates for life ontologies.
+- Optional sync (e.g. Todoist/Google Tasks) with Security/Privacy review.

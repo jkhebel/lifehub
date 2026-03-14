@@ -1,6 +1,6 @@
 # Life Dashboard — Architecture
 
-High-level structure, boundaries, and data flow for the Life Dashboard app. Lead/Test/Docs/UI/Game agents use this to decide what to build and where. The JSON stat-tree model is introduced in `docs/PROJECT.md`. The Phase 1 schema (Area/Tracker shapes, validation expectations) is defined in [docs/JSON-MODEL.md](JSON-MODEL.md); design details may also appear in `docs/DESIGN.md` where applicable.
+High-level structure, boundaries, and data flow for the Life Dashboard app. Lead/Test/Docs/UI/Game agents use this to decide what to build and where. The JSON stat-tree model is introduced in `docs/PROJECT.md`. The Phase 1 schema (Area, optional DomainMetric, validation expectations) is defined in [docs/JSON-MODEL.md](JSON-MODEL.md); design details may also appear in `docs/DESIGN.md` where applicable.
 
 ---
 
@@ -146,18 +146,16 @@ Implementation options:
 Core components include:
 
 - `DomainTree`:
-  - Renders nested domains/subdomains.
-  - Allows selection and basic editing (rename/add/remove) where supported.
-- `Bullseye`:
-  - Draws concentric rings and segments based on derived metrics.
-  - Should be responsive and accessible (e.g. tooltips or labels for segments).
+  - Renders nested domains/subdomains with inline metric summary (e.g. `250/2000`, `N3`, `Done`) and progress per row.
+  - Single click selects; double-click opens the domain edit modal. Drag-and-drop: drop on the thin strip above a row reorders siblings; drop on a row moves the domain as a child of that row. Sibling order is manual (array order); no separate bottom panel.
+- `BullseyeDiagram`:
+  - Draws concentric rings and segments based on derived metrics. Responsive and accessible (labels, center click to navigate up).
 - `CharacterCard`:
-  - Shows key stats, level, and flavor text.
-  - Pulls from the same derived metrics used by the bullseye.
-- `DomainPanel`:
-  - Single bottom panel: current domain’s children, add subdomain, set/edit metric (binary, progress, stages), derive from children, delete domain.
+  - Shows overall progress and a **Pinned** section (when any domains are pinned) above the domain tree. Pinned chips navigate to that domain; star on a chip unpins. Contains the domain tree and "Add domain" button.
+- `DomainModal`:
+  - Single modal for both **Add domain** and **Edit domain** (opened by "Add domain" or double-clicking a row). Fields: name, emoji, color (add only), metric toggle (No metric / Metric) and type-specific inputs (binary, progress, stages). Edit mode only: "Pin to favorites" checkbox, "Delete this domain" (triggers confirmation dialog). When an area is deleted, its id and all descendant ids are removed from `pinnedAreaIds`.
 - Layout and chrome:
-  - Shell, navigation, settings, etc.
+  - Shell, breadcrumbs, settings, radar + character card grid (no bottom domain panel).
 
 Each component should consume **typed props** derived from the model and avoid directly poking into raw JSON where possible.
 
@@ -230,7 +228,7 @@ Behavior is deterministic for the same tree and values. The bullseye and charact
 
 ## 5. Gamification (deferred)
 
-Gamification (XP, badges, avatar, titles) is **deferred** until after the unified domain-metrics refactor and trial usage. The app currently persists only `areas`, `currentAreaId`, and `breadcrumbs`. When gamification is re-added, it can be keyed off “binary domain completed” and optional progress/stages thresholds; user state for gamification can be reintroduced in a later phase. See PROJECT.md and the roadmap.
+Gamification (XP, badges, avatar, titles) is **deferred** until after the unified domain-metrics refactor and trial usage. The app currently persists `areas`, `currentAreaId`, `breadcrumbs`, and `pinnedAreaIds` (favorite domain ids for quick access). When an area is deleted, its id and all descendant ids are removed from `pinnedAreaIds` so the list stays consistent. When gamification is re-added, it can be keyed off “binary domain completed” and optional progress/stages thresholds; user state for gamification can be reintroduced in a later phase. See PROJECT.md and the roadmap.
 
 ---
 

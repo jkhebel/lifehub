@@ -131,10 +131,13 @@ Configs can come from a **bundled default** (e.g. six OG domains) or **user stat
 
 ## 6. Persisted state
 
-Dashboard state persisted to localStorage includes only:
+Dashboard state persisted to localStorage includes:
 
 - `areas` — the tree of areas (new shape only).
 - `currentAreaId` — selected domain id or null.
 - `breadcrumbs` — array of area ids for navigation path.
+- `pinnedAreaIds` — array of domain ids pinned as favorites for quick access (order preserved).
+
+When an area is deleted, its id and all descendant ids are removed from `pinnedAreaIds` so the list does not retain stale references.
 
 Gamification (XP, badges, completion log) is deferred; when re-added, it can be keyed off “binary domain completed” and optional progress/stages thresholds.
